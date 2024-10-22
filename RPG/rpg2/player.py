@@ -85,6 +85,7 @@ class Player(Character):
         else:
             self.is_moving = False
 
+
     def set_target(self, target_x, target_y, environment):
         # Check if the target is in a collision area
         if environment.is_collision(target_x, target_y):

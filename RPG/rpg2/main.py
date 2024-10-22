@@ -1,12 +1,12 @@
 import random
 
 import pygame
+
+from CharacterManager import NPCManager, MonsterManager
 from constants import SCREEN_WIDTH, SCREEN_HEIGHT, PLAYER_SPEED, PLAYER_SPRINT_SPEED, TILE_SIZE, NPC_COUNT, MONSTER_COUNT, CHARACTER_SCALE_FACTOR
 from environment import Environment
 from player import Player
 from display import Display
-from non_player_character import NPC1, NPC2, NPC3, Alien, Slime, Bat, Ghost, Spider
-
 
 def main():
     pygame.init()
@@ -20,61 +20,14 @@ def main():
     mid_x = environment.width // 2
     mid_y = environment.height // 2
 
-    player = Player(mid_x * TILE_SIZE + TILE_SIZE * 3, mid_y * TILE_SIZE - TILE_SIZE * 3, environment)
-
-    # Initialize player in the north-east quadrant, blocked in by a circular area
-    player = Player(mid_x * TILE_SIZE + TILE_SIZE * 3, mid_y * TILE_SIZE - TILE_SIZE * 3, environment)
+    # Environment, player and display
+    environment = Environment(300, 300)
     display = Display(screen)
+    player = Player(mid_x * TILE_SIZE + TILE_SIZE * 3, mid_y * TILE_SIZE - TILE_SIZE * 3, environment)
 
-    # Initialize NPCs in specific quadrants
-    npc1 = NPC1()  # North-east
-    npc1.x = (mid_x + mid_x // 2) * TILE_SIZE
-    npc1.y = mid_y // 2 * TILE_SIZE
-
-    npc2 = NPC2()  # South-east
-    npc2.x = (mid_x + mid_x // 2) * TILE_SIZE
-    npc2.y = (mid_y + mid_y // 2) * TILE_SIZE
-
-    npc3 = NPC3()  # South-west
-    npc3.x = mid_x // 2 * TILE_SIZE
-    npc3.y = (mid_y + mid_y // 2) * TILE_SIZE
-
-    alien = Alien()  # North-west
-    alien.x = mid_x // 2 * TILE_SIZE
-    alien.y = mid_y // 2 * TILE_SIZE
-
-    # Initialize Monsters - one type per quadrant, multiple of each
-    # North-east quadrant - Slimes
-    monsters = []
-    for _ in range(3):
-        slime = Slime()
-        slime.x = random.randint(mid_x + mid_x // 4, environment.width) * TILE_SIZE
-        slime.y = random.randint(0, mid_y - mid_y // 4) * TILE_SIZE
-        monsters.append(slime)
-
-    # South-east quadrant - Bats
-    for _ in range(3):
-        bat = Bat()
-        bat.x = random.randint(mid_x + mid_x // 4, environment.width) * TILE_SIZE
-        bat.y = random.randint(mid_y + mid_y // 4, environment.height) * TILE_SIZE
-        monsters.append(bat)
-
-    # South-west quadrant - Ghosts
-    for _ in range(3):
-        ghost = Ghost()
-        ghost.x = random.randint(0, mid_x - mid_x // 4) * TILE_SIZE
-        ghost.y = random.randint(mid_y + mid_y // 4, environment.height) * TILE_SIZE
-        monsters.append(ghost)
-
-    # North-west quadrant - Spiders
-    for _ in range(3):
-        spider = Spider()
-        spider.x = random.randint(0, mid_x - mid_x // 4) * TILE_SIZE
-        spider.y = random.randint(0, mid_y - mid_y // 4) * TILE_SIZE
-        monsters.append(spider)
-
-    # Initialize NPCs and Monsters list
-    npcs = [npc1, npc2, npc3, alien]
+    # Replace individual character spawning with managers
+    npc_manager = NPCManager(environment)
+    monster_manager = MonsterManager(environment)
 
     game_state = "menu"
 
@@ -102,13 +55,8 @@ def main():
             player.update(dt, environment)
 
             # Update NPCs and Monsters
-            for npc in npcs:
-                npc.update()
-                npc.patrol_with_stops(environment)
-
-            for monster in monsters:
-                monster.update()
-                monster.random_movement(environment)
+            npc_manager.update()
+            monster_manager.update(player)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -127,7 +75,8 @@ def main():
         if game_state == "menu":
             display.draw_menu()
         elif game_state == "playing":
-            display.draw_environment(environment, player, npcs, monsters)
+            display.draw_environment(environment, player, npc_manager.npcs,
+                                     monster_manager.monsters + monster_manager.bosses)
 
         pygame.display.flip()
 

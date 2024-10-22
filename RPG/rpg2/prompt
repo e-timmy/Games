@@ -1,4 +1,13 @@
-Working on path through forests on border.
+Next prompt once the character spawning has been dealt with:
+
+I need some help with an RPG I'm developing in python using pygame. The relevant code (at least what I have deemed as relevant) is pasted below. Add the following mechanics:
+
+- For the monster in the given quadrant of the map, make a larger version that exists within the boss arena for the given quadrant.
+- Alter the quadrants so that they have the following order: top-right = spring, bottom-right=summer, bottom-left=autumn, top-left=winter.
+- Remove the forest that allows access between the top-left and top-right quadrants.
+
+Implement these three things, for any class altered, replace back in full, under subheadings separated by the given file.
+
 
 Then think about structuring each quadrant.
 

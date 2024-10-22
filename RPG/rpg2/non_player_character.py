@@ -1,8 +1,8 @@
 import pygame
 import math
 import random
-from constants import CHARACTER_SCALE_FACTOR
-
+from constants import (TILE_SIZE, CHARACTER_SCALE_FACTOR, BOSS_SCALE_FACTOR, BOSS_HEALTH_MULTIPLIER,
+                       BOSS_DAMAGE_MULTIPLIER, BOSS_MOVEMENT_AREA_SIZE)
 # Load sprite sheet
 sprite_sheet = pygame.image.load('assets/town_rpg_pack/graphics/characters/characters.png')
 
@@ -137,24 +137,55 @@ class NPC(NonPlayerCharacter):
 
 
 class Monster(NonPlayerCharacter):
-    def __init__(self, sprite_position, speed):
+    def __init__(self, sprite_position, base_speed, base_health, base_perception):
         super().__init__(sprite_position)
-        self.health = 100
+        self.base_speed = base_speed
+        self.base_health = base_health
+        self.base_perception = base_perception
+
+        # Base monster attributes
+        self.speed = base_speed
+        self.health = base_health
+        self.max_health = base_health
+        self.perception_range = base_perception
         self.damage = 10
-        self.speed = speed
+        self.is_boss = False
 
         # Movement area
         self.area_center_x = self.x
         self.area_center_y = self.y
         self.area_size = 150
 
-        # Random movement
-        self.change_direction_timer = random.randint(30, 90)  # Random initial timer
-        self.max_direction_time = 60  # 1 second at 60 FPS
-
-        # Initialize with zero movement
+        # Initialize movement variables
+        self.change_direction_timer = random.randint(30, 90)
         self.current_dx = 0
         self.current_dy = 0
+
+        # Scaling factor
+        self.quadrant_multiplier = 1.0
+
+    def get_current_sprite(self):
+        # Get base sprite from parent class without any scaling
+        base_sprite = super().get_current_sprite()
+
+        # Apply character scale factor
+        scaled_width = self.sprite_width * CHARACTER_SCALE_FACTOR
+        scaled_height = self.sprite_height * CHARACTER_SCALE_FACTOR
+
+        # If it's a boss, apply additional scaling
+        if self.is_boss:
+            scaled_width *= BOSS_SCALE_FACTOR
+            scaled_height *= BOSS_SCALE_FACTOR
+
+        return pygame.transform.scale(base_sprite, (int(scaled_width), int(scaled_height)))
+
+    def set_as_boss(self):
+        self.is_boss = True
+        self.health *= BOSS_HEALTH_MULTIPLIER
+        self.max_health *= BOSS_HEALTH_MULTIPLIER
+        self.damage *= BOSS_DAMAGE_MULTIPLIER
+        self.area_size = BOSS_MOVEMENT_AREA_SIZE
+        self.perception_range *= 1.5  # Bosses have 50% larger perception range
 
     def random_movement(self, environment):
         # Change direction periodically
@@ -170,22 +201,22 @@ class Monster(NonPlayerCharacter):
                 self.current_dy = random.choice([-1, 1]) * random.uniform(0.5, 1)
                 self.current_dx = 0
 
-            # Constrain to movement area
-            if (abs(self.x - self.area_center_x) > self.area_size or
-                    abs(self.y - self.area_center_y) > self.area_size):
-                # Pull back towards center if near edge
-                self.current_dx += (self.area_center_x - self.x) / self.area_size
-                self.current_dy += (self.area_center_y - self.y) / self.area_size
+            # Stronger pull towards center for bosses
+            if self.is_boss:
+                pull_strength = 0.1
+                dx_to_center = self.area_center_x - self.x
+                dy_to_center = self.area_center_y - self.y
+                distance_to_center = math.sqrt(dx_to_center ** 2 + dy_to_center ** 2)
+
+                if distance_to_center > self.area_size:
+                    self.current_dx += (dx_to_center / distance_to_center) * pull_strength
+                    self.current_dy += (dy_to_center / distance_to_center) * pull_strength
 
             # Reset timer with some randomness
             self.change_direction_timer = random.randint(30, 90)
 
         # Move
         self.move(self.current_dx, self.current_dy, environment)
-
-        # Update the movement area center
-        self.area_center_x = self.x
-        self.area_center_y = self.y
 
 
 # Individual NPC Classes
@@ -214,29 +245,36 @@ class Alien(NPC):
 
 
 # Individual Monster Classes
+# Specific Monster Classes with base stats
 class Slime(Monster):
     def __init__(self):
-        super().__init__((1, 0), speed=0.5)
-        self.health = 50
-        self.damage = 5
+        # Lowest base stats
+        super().__init__((1, 0),
+                         base_speed=0.3,      # Slowest
+                         base_health=50,      # Lowest health
+                         base_perception=100) # Shortest perception
 
 
 class Bat(Monster):
     def __init__(self):
-        super().__init__((1, 1), speed=2)
-        self.health = 30
-        self.damage = 8
+        super().__init__((1, 1),
+                         base_speed=0.5,      # Slightly faster
+                         base_health=75,      # Slightly more health
+                         base_perception=150) # Slightly longer perception
 
 
 class Ghost(Monster):
     def __init__(self):
-        super().__init__((1, 2), speed=1)
-        self.health = 40
-        self.damage = 15
+        super().__init__((1, 2),
+                         base_speed=0.7,      # Faster
+                         base_health=100,     # More health
+                         base_perception=200) # Longer perception
 
 
 class Spider(Monster):
     def __init__(self):
-        super().__init__((1, 3), speed=1.5)
-        self.health = 35
-        self.damage = 12
+        # Highest base stats
+        super().__init__((1, 3),
+                         base_speed=1.0,      # Fastest
+                         base_health=125,     # Highest health
+                         base_perception=250) # Longest perception

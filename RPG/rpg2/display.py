@@ -63,16 +63,21 @@ class Display:
 
         # Draw NPCs and Monsters
         for npc in npcs:
-            npc_sprite = pygame.transform.scale(npc.get_current_sprite(), (npc.sprite_width * CHARACTER_SCALE_FACTOR, npc.sprite_height * CHARACTER_SCALE_FACTOR))
+            npc_sprite = pygame.transform.scale(npc.get_current_sprite(),
+                                                (npc.sprite_width * CHARACTER_SCALE_FACTOR,
+                                                 npc.sprite_height * CHARACTER_SCALE_FACTOR))
             npc_screen_x = npc.x - player.x + SCREEN_WIDTH // 2 - npc_sprite.get_width() // 2
             npc_screen_y = npc.y - player.y + SCREEN_HEIGHT // 2 - npc_sprite.get_height() // 2
             self.screen.blit(npc_sprite, (npc_screen_x, npc_screen_y))
 
         for monster in monsters:
-            monster_sprite = pygame.transform.scale(monster.get_current_sprite(),
-                                                  (monster.sprite_width * CHARACTER_SCALE_FACTOR, monster.sprite_height * CHARACTER_SCALE_FACTOR))
+            # Get the sprite with appropriate scaling
+            monster_sprite = monster.get_current_sprite()  # This now handles all scaling
+
+            # Calculate screen position accounting for the scaled sprite size
             monster_screen_x = monster.x - player.x + SCREEN_WIDTH // 2 - monster_sprite.get_width() // 2
             monster_screen_y = monster.y - player.y + SCREEN_HEIGHT // 2 - monster_sprite.get_height() // 2
+
             self.screen.blit(monster_sprite, (monster_screen_x, monster_screen_y))
 
         # Draw player in center of screen
