@@ -9,8 +9,11 @@ class Camera:
         self.transition_target = 0
 
     def apply(self, x, y):
-        # Convert world coordinates to screen coordinates
-        return (x - self.x, y)
+        screen_x = x - self.x
+        # Expanded visible range to account for higher level numbers
+        if screen_x < -self.width * 2 or screen_x > self.width * 4:
+            return (-1000, -1000)
+        return (screen_x, y)
 
     def get_visible_bounds(self):
         return (self.x, self.x + self.width)

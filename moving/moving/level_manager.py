@@ -33,7 +33,6 @@ class Level:
         self.generate_items()
         self.create_blocking_wall()
 
-
     def generate_items(self):
         if self.level_number == 0:
             item = Item(self.space,
@@ -44,6 +43,39 @@ class Level:
             item = Item(self.space,
                         (self.x_offset + WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2),
                         PowerUpType.SHOOT)
+            self.items.append(item)
+        elif self.level_number == 2:
+            # Place item in top right corner
+            item = Item(self.space,
+                        (self.x_offset + WINDOW_WIDTH - 50, 50),
+                        PowerUpType.GRAVITY)
+            self.items.append(item)
+        elif self.level_number == 3:
+            # Create a challenging position for the fourth item
+            # Place it on a high platform or in a difficult-to-reach corner
+            item = Item(self.space,
+                        (self.x_offset + WINDOW_WIDTH - 50, WINDOW_HEIGHT - 550),  # Very high up
+                        PowerUpType.JUMP)  # You can change this to a new power type
+            self.items.append(item)
+
+            # Optionally, you could add some platforms here to make it even more challenging
+            platform_body = pymunk.Body(body_type=pymunk.Body.STATIC)
+            platform_shape = pymunk.Segment(
+                platform_body,
+                (self.x_offset + WINDOW_WIDTH - 200, WINDOW_HEIGHT - 400),
+                (self.x_offset + WINDOW_WIDTH - 100, WINDOW_HEIGHT - 400),
+                WALL_THICKNESS / 2
+            )
+            platform_shape.friction = 1.0
+            platform_shape.elasticity = 0.5
+            platform_shape.collision_type = 3
+            self.boundaries.append((platform_body, platform_shape))
+            self.space.add(platform_body, platform_shape)
+        else:
+            # For any additional levels
+            item = Item(self.space,
+                        (self.x_offset + WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2),
+                        PowerUpType.JUMP)
             self.items.append(item)
 
     def create_boundaries(self):
@@ -59,7 +91,19 @@ class Level:
         floor_shape.elasticity = 0.5
         floor_shape.collision_type = 3
 
-        self.boundaries = [(floor_body, floor_shape)]
+        # Create roof
+        roof_body = pymunk.Body(body_type=pymunk.Body.STATIC)
+        roof_shape = pymunk.Segment(
+            roof_body,
+            (self.x_offset, WALL_THICKNESS / 2),
+            (self.x_offset + WINDOW_WIDTH, WALL_THICKNESS / 2),
+            WALL_THICKNESS / 2
+        )
+        roof_shape.friction = 1.0
+        roof_shape.elasticity = 0.5
+        roof_shape.collision_type = 3
+
+        self.boundaries = [(floor_body, floor_shape), (roof_body, roof_shape)]
         for body, shape in self.boundaries:
             self.space.add(body, shape)
 
@@ -134,49 +178,63 @@ class Level:
         self.update_blocking_wall()
 
     def draw(self, screen, camera):
-        # Draw floor
+        # Draw floor and roof
         floor_start = camera.apply(self.x_offset, WINDOW_HEIGHT - WALL_THICKNESS)
-        pygame.draw.rect(screen, GRAY,
-                         (floor_start[0], floor_start[1],
-                          WINDOW_WIDTH, WALL_THICKNESS))
+        roof_start = camera.apply(self.x_offset, 0)
 
-        # Draw descending wall (same color as floor)
+        if floor_start[0] > -1000:
+            # Draw floor
+            pygame.draw.rect(screen, GRAY,
+                             (floor_start[0], floor_start[1],
+                              WINDOW_WIDTH, WALL_THICKNESS))
+            # Draw roof
+            pygame.draw.rect(screen, GRAY,
+                             (roof_start[0], roof_start[1],
+                              WINDOW_WIDTH, WALL_THICKNESS))
+
+        # Draw descending wall
         if self.wall_height > 0:
             wall_start = camera.apply(self.x_offset - WALL_THICKNESS / 2, 0)
-            pygame.draw.rect(screen, GRAY,
-                             (wall_start[0], wall_start[1],
-                              WALL_THICKNESS, self.wall_height))
+            if wall_start[0] > -1000:  # Check if position is valid
+                pygame.draw.rect(screen, GRAY,
+                                 (wall_start[0], wall_start[1],
+                                  WALL_THICKNESS, self.wall_height))
 
         # Draw blocking wall
         if self.has_blocking_wall and self.blocking_wall_height > 0:
             block_wall_start = camera.apply(self.x_offset + WINDOW_WIDTH - WALL_THICKNESS / 2, 0)
-            pygame.draw.rect(screen, GRAY,
-                             (block_wall_start[0], block_wall_start[1],
-                              WALL_THICKNESS, self.blocking_wall_height))
+            if block_wall_start[0] > -1000:  # Check if position is valid
+                pygame.draw.rect(screen, GRAY,
+                                 (block_wall_start[0], block_wall_start[1],
+                                  WALL_THICKNESS, self.blocking_wall_height))
 
-        # Draw level boundary markers (for debug purposes)
+        # Draw level boundary markers
         boundary_start = camera.apply(self.x_offset, 0)
         boundary_end = camera.apply(self.x_offset, WINDOW_HEIGHT)
-        pygame.draw.line(screen, RED, boundary_start, boundary_end, 3)
+        if boundary_start[0] > -1000:  # Check if position is valid
+            pygame.draw.line(screen, RED, boundary_start, boundary_end, 3)
 
         right_boundary_start = camera.apply(self.x_offset + WINDOW_WIDTH, 0)
         right_boundary_end = camera.apply(self.x_offset + WINDOW_WIDTH, WINDOW_HEIGHT)
-        pygame.draw.line(screen, BLUE, right_boundary_start, right_boundary_end, 3)
+        if right_boundary_start[0] > -1000:  # Check if position is valid
+            pygame.draw.line(screen, BLUE, right_boundary_start, right_boundary_end, 3)
 
         # Draw level number
         font = pygame.font.Font(None, 36)
         level_text = font.render(f"Level {self.level_number}", True, WHITE)
         text_pos = camera.apply(self.x_offset + 50, 50)
-        screen.blit(level_text, text_pos)
+        if text_pos[0] > -1000:  # Check if position is valid
+            screen.blit(level_text, text_pos)
 
         # Draw items
         for item in self.items:
             if not item.collected:
                 item_pos = camera.apply(item.body.position.x, item.body.position.y)
-                pygame.draw.rect(screen, GREEN,
-                                 (item_pos[0] - ITEM_SIZE / 2,
-                                  item_pos[1] - ITEM_SIZE / 2,
-                                  ITEM_SIZE, ITEM_SIZE))
+                if item_pos[0] > -1000:  # Check if position is valid
+                    pygame.draw.rect(screen, GREEN,
+                                     (item_pos[0] - ITEM_SIZE / 2,
+                                      item_pos[1] - ITEM_SIZE / 2,
+                                      ITEM_SIZE, ITEM_SIZE))
 
     def clear(self):
         for item in self.items:
@@ -279,4 +337,3 @@ class LevelManager:
     def start_transition(self):
         self.transitioning = True
         self.camera_offset = 0
-

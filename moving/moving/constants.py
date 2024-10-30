@@ -12,7 +12,7 @@ WALL_THICKNESS = 20
 
 # Physics
 ROTATION_SPEED = 3
-JUMP_FORCE = 500
+JUMP_FORCE = 800
 GROUND_THRESHOLD = 0.1
 
 # Colors
@@ -23,3 +23,5 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 YELLOW = (255, 255, 0)
 GRAY = (128, 128, 128)
+
+DEBUG_MODE = False  # Set to True to see physics bodies

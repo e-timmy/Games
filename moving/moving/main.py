@@ -43,6 +43,9 @@ class Game:
                 item.collected = True
             return True
 
+        def bullet_wall_collision(arbiter, space, data):
+            return True  # Return True to allow for bouncing
+
         # Player collecting item
         handler = self.space.add_collision_handler(1, 2)  # Player: 1, Item: 2
         handler.begin = collect_item
@@ -51,6 +54,10 @@ class Game:
         bullet_handler = self.space.add_collision_handler(4, 2)  # Bullet: 4, Item: 2
         bullet_handler.begin = bullet_collect_item
 
+        # Bullet wall collision
+        bullet_wall_handler = self.space.add_collision_handler(4, 3)  # Bullet: 4, Wall: 3
+        bullet_wall_handler.begin = bullet_wall_collision
+
     def run(self):
         while True:
             for event in pygame.event.get():
@@ -58,15 +65,12 @@ class Game:
                     pygame.quit()
                     sys.exit()
                 elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE:
-                        self.player.start_aiming()
-                    elif event.key == pygame.K_j:
+                    if event.key == pygame.K_j:
                         self.player.jump()
                     elif event.key == pygame.K_s:
                         self.player.shoot()
-                elif event.type == pygame.KEYUP:
-                    if event.key == pygame.K_SPACE:
-                        self.state = PlayerState.FALLING
+                    elif event.key == pygame.K_g:
+                        self.player.toggle_gravity()
 
             self.space.step(1 / FPS)
             self.player.update_aim()

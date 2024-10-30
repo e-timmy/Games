@@ -10,16 +10,22 @@ class PlayerState(Enum):
 class PowerUpType(Enum):
     JUMP = 1
     SHOOT = 2
+    GRAVITY = 3
 
 
 class Bullet:
     def __init__(self, space, pos, direction, speed=500):
-        self.body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)  # Changed to KINEMATIC
+        self.body = pymunk.Body(1, pymunk.moment_for_circle(1, 0, 5))
         self.body.position = pos
-        self.shape = pymunk.Circle(self.body, 5)
-        self.shape.collision_type = 4  # Bullet collision type
+        # This is the key line we need:
+        self.body.velocity_func = lambda body, gravity, damping, dt: (body.velocity.x, body.velocity.y)
 
-        # Apply velocity in the direction of aim
+        self.shape = pymunk.Circle(self.body, 5)
+        self.shape.collision_type = 4
+        self.shape.elasticity = 0.8
+        self.shape.friction = 0.5
+
+        # Set initial velocity
         self.body.velocity = (direction[0] * speed, direction[1] * speed)
 
         space.add(self.body, self.shape)
