@@ -1,6 +1,3 @@
-import pygame
-
-# Window and Game Constants
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
 FPS = 60
@@ -24,4 +21,4 @@ GREEN = (0, 255, 0)
 YELLOW = (255, 255, 0)
 GRAY = (128, 128, 128)
 
-DEBUG_MODE = True  # Set to True to see physics bodies
+DEBUG_MODE = True

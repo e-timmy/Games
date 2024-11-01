@@ -1,22 +1,18 @@
-class Camera:
+class CameraController:
     def __init__(self, width, height):
-        self.x = 0
-        self.y = 0
         self.width = width
         self.height = height
+        self.x = 0
+        self.y = 0
         self.transitioning = False
-        self.transition_speed = 10
         self.transition_target = 0
+        self.transition_speed = 10
 
     def apply(self, x, y):
         screen_x = x - self.x
-        # Only check for lower bound, remove upper bound check
         if screen_x < -self.width * 2:
             return (-1000, -1000)
         return (screen_x, y)
-
-    def get_visible_bounds(self):
-        return (self.x, self.x + self.width)
 
     def start_transition(self):
         self.transitioning = True

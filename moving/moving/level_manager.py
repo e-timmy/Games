@@ -178,6 +178,18 @@ class Level:
         self.update_blocking_wall()
 
     def draw(self, screen, camera):
+
+        for body, shape in self.boundaries:
+            if isinstance(shape, pymunk.Segment):
+                start = camera.apply(shape.a.x + body.position.x,
+                                     shape.a.y + body.position.y)
+                end = camera.apply(shape.b.x + body.position.x,
+                                   shape.b.y + body.position.y)
+
+                # Only draw if it's within the visible area
+                if start[0] > -1000 or end[0] > -1000:
+                    pygame.draw.line(screen, GRAY, start, end, int(shape.radius * 2))
+
         # Draw floor and roof
         floor_start = camera.apply(self.x_offset, WINDOW_HEIGHT - WALL_THICKNESS)
         roof_start = camera.apply(self.x_offset, 0)
@@ -207,17 +219,6 @@ class Level:
                 pygame.draw.rect(screen, GRAY,
                                  (block_wall_start[0], block_wall_start[1],
                                   WALL_THICKNESS, self.blocking_wall_height))
-
-        # Draw level boundary markers
-        boundary_start = camera.apply(self.x_offset, 0)
-        boundary_end = camera.apply(self.x_offset, WINDOW_HEIGHT)
-        if boundary_start[0] > -1000:  # Check if position is valid
-            pygame.draw.line(screen, RED, boundary_start, boundary_end, 3)
-
-        right_boundary_start = camera.apply(self.x_offset + WINDOW_WIDTH, 0)
-        right_boundary_end = camera.apply(self.x_offset + WINDOW_WIDTH, WINDOW_HEIGHT)
-        if right_boundary_start[0] > -1000:  # Check if position is valid
-            pygame.draw.line(screen, BLUE, right_boundary_start, right_boundary_end, 3)
 
         # Draw level number
         font = pygame.font.Font(None, 36)

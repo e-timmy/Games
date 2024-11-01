@@ -39,6 +39,7 @@ class Player:
         self.AIM_SPEED = 3
         self.ARM_LENGTH = PLAYER_SIZE * 0.6
         self.ARM_OFFSET = PLAYER_SIZE * 0.6  # New constant for arm position
+        self.bullets = []
 
     def _create_semicircle_vertices(self, radius, num_segments):
         """Create vertices for a semi-circle physics body"""
@@ -88,29 +89,21 @@ class Player:
             # Draw the shape
             pygame.draw.polygon(screen, BLUE, vertices)
 
-            # Draw arm from slightly outside the semi-circle
-            if self.gravity_normal:
-                arm_start = (
-                    pos[0] + math.cos(self.aim_angle) * self.ARM_OFFSET * 0.5,
-                    pos[1] + math.sin(self.aim_angle) * self.ARM_OFFSET * 0.5
-                )
-                arm_end = (
-                    pos[0] + math.cos(self.aim_angle) * self.ARM_LENGTH,
-                    pos[1] + math.sin(self.aim_angle) * self.ARM_LENGTH
-                )
-            else:
-                arm_start = (
-                    pos[0] + math.cos(self.aim_angle) * self.ARM_OFFSET * 0.5,
-                    pos[1] - math.sin(self.aim_angle) * self.ARM_OFFSET * 0.5
-                )
-                arm_end = (
-                    pos[0] + math.cos(self.aim_angle) * self.ARM_LENGTH,
-                    pos[1] - math.sin(self.aim_angle) * self.ARM_LENGTH
-                )
+            # Calculate arm start and end positions based on player's rotation
+            angle_offset = self.aim_angle + self.body.angle
+
+            arm_start = (
+                pos[0] + math.cos(angle_offset) * self.ARM_OFFSET * 0.5,
+                pos[1] + math.sin(angle_offset) * self.ARM_OFFSET * 0.5
+            )
+            arm_end = (
+                pos[0] + math.cos(angle_offset) * self.ARM_LENGTH,
+                pos[1] + math.sin(angle_offset) * self.ARM_LENGTH
+            )
 
             pygame.draw.line(screen, BLUE, arm_start, arm_end, 3)
 
-        # Draw bullets
+        # Draw bullets (unchanged)
         for bullet in self.bullets:
             bullet_pos = camera.apply(bullet.body.position.x, bullet.body.position.y)
             if bullet_pos[0] > -1000:
@@ -120,24 +113,15 @@ class Player:
     def jump(self):
         if (self.state == PlayerState.GROUNDED and
                 self.powerup_manager.has_powerup(PowerUpType.JUMP)):
-            # Get the visual direction of the arm
+            # Jump direction is now always based on aim, regardless of gravity
             direction = pygame.math.Vector2(
                 math.cos(self.aim_angle),
                 math.sin(self.aim_angle)
             )
 
-            if not self.gravity_normal:
-                # When gravity is reversed, only invert the X component
-                direction.x *= -1
-                # Y component stays as is to match the visual aim
-
             impulse = direction * self.JUMP_FORCE
 
-            # Apply impulse from the edge of the semi-circle
-            offset = (math.cos(self.aim_angle) * self.ARM_OFFSET * 0.5,
-                      math.sin(self.aim_angle) * self.ARM_OFFSET * 0.5)
-
-            self.body.apply_impulse_at_local_point((impulse.x, impulse.y), offset)
+            self.body.apply_impulse_at_local_point((impulse.x, impulse.y))
             self.state = PlayerState.FALLING
 
     def shoot(self):
@@ -147,16 +131,10 @@ class Player:
                 math.sin(self.aim_angle)
             )
 
-            if not self.gravity_normal:
-                direction.y *= -1
-
-            # Calculate bullet start position from the arm's end
-            arm_offset = self.ARM_OFFSET * 0.5
+            # Calculate bullet start position (unchanged)
             start_pos = (
                 self.body.position.x + math.cos(self.aim_angle) * self.ARM_LENGTH,
-                self.body.position.y + (math.sin(self.aim_angle) * self.ARM_LENGTH
-                                        if self.gravity_normal
-                                        else -math.sin(self.aim_angle) * self.ARM_LENGTH)
+                self.body.position.y + math.sin(self.aim_angle) * self.ARM_LENGTH
             )
 
             bullet = Bullet(self.space, start_pos, (direction.x, direction.y))
@@ -164,21 +142,15 @@ class Player:
 
     def toggle_gravity(self):
         if self.powerup_manager.has_powerup(PowerUpType.GRAVITY):
-            self.gravity_normal = not self.gravity_normal
-            # Flip the body
-            self.body.angle = 0 if self.gravity_normal else math.pi
-            if self.gravity_normal:
-                self.space.gravity = (0, 981)
-            else:
-                self.space.gravity = (0, -981)
+            # Calculate gravity direction based on aim angle
+            gravity_x = math.cos(self.aim_angle) * 981
+            gravity_y = math.sin(self.aim_angle) * 981
+
+            # Update space gravity
+            self.space.gravity = (gravity_x, gravity_y)
 
     def update_state(self):
         if abs(self.body.velocity.y) < 1:
             self.state = PlayerState.GROUNDED
         else:
             self.state = PlayerState.FALLING
-
-    def update_bullets(self):
-        self.bullets = [bullet for bullet in self.bullets
-                        if -WINDOW_WIDTH <= bullet.body.position.x <= WINDOW_WIDTH * 4
-                        and -WINDOW_HEIGHT <= bullet.body.position.y <= WINDOW_HEIGHT * 2]

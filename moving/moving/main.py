@@ -21,8 +21,8 @@ class Game:
         self.space.gravity = (0, 981)
 
         self.camera = Camera(WINDOW_WIDTH, WINDOW_WIDTH)
-        self.player = Player(self.space, (WINDOW_WIDTH // 2, 50))
         self.level_manager = LevelManager(self.space)
+        self.player = Player(self.space, (WINDOW_WIDTH // 2, 50))
 
         self.setup_collisions()
 
@@ -75,7 +75,7 @@ class Game:
             self.space.step(1 / FPS)
             self.player.update_aim()
             self.player.update_state()
-            self.player.update_bullets()
+            self.update_bullets()  # New method to manage bullets
 
             # Check for first landing in starting level
             self.level_manager.check_first_landing(self.player.state.name)
@@ -92,9 +92,50 @@ class Game:
             self.screen.fill(BLACK)
             self.player.draw(self.screen, self.camera)
             self.level_manager.draw_current_level(self.screen, self.camera)
+            self.draw_debug()  # Add this line to enable debug drawing
 
             pygame.display.flip()
             self.clock.tick(FPS)
+
+    def draw_debug(self):
+        if not DEBUG_MODE:
+            return
+
+        # Draw all physics shapes
+        for shape in self.space.shapes:
+            if isinstance(shape, pymunk.Segment):
+                start = shape.a + shape.body.position
+                end = shape.b + shape.body.position
+                start_screen = self.camera.apply(start.x, start.y)
+                end_screen = self.camera.apply(end.x, end.y)
+                if start_screen[0] > -1000 and end_screen[0] > -1000:
+                    pygame.draw.line(self.screen, RED, start_screen, end_screen, 1)
+
+            elif isinstance(shape, pymunk.Circle):
+                pos = self.camera.apply(shape.body.position.x, shape.body.position.y)
+                if pos[0] > -1000:
+                    pygame.draw.circle(self.screen, RED,
+                                       (int(pos[0]), int(pos[1])),
+                                       int(shape.radius), 1)
+
+            elif isinstance(shape, pymunk.Poly):
+                vertices = [self.camera.apply(v.x + shape.body.position.x,
+                                              v.y + shape.body.position.y)
+                            for v in shape.get_vertices()]
+                if any(v[0] > -1000 for v in vertices):
+                    pygame.draw.polygon(self.screen, RED, vertices, 1)
+
+    def update_bullets(self):
+        current_level_offset = self.level_manager.current_level_number * WINDOW_WIDTH
+        min_x = current_level_offset - WINDOW_WIDTH
+        max_x = current_level_offset + WINDOW_WIDTH * 2
+
+        # Remove bullets that are out of bounds
+        self.player.bullets = [
+            bullet for bullet in self.player.bullets
+            if (min_x <= bullet.body.position.x <= max_x and
+                -WINDOW_HEIGHT <= bullet.body.position.y <= WINDOW_HEIGHT * 2)
+        ]
 
 
 if __name__ == "__main__":
