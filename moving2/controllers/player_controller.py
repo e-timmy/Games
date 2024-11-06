@@ -5,6 +5,7 @@ from controllers import level_controller
 from entities.player import Player
 from systems.powerup_system import PowerUpSystem, PowerUpType
 from entities.bullet import Bullet
+from entities.aoe import AOEEffect
 from entities.game_states import PlayerState
 from constants.game_constants import *
 
@@ -15,6 +16,7 @@ class PlayerController:
         self.player = Player(space, (WINDOW_WIDTH // 2, 50))
         self.powerup_system = PowerUpSystem()
         self.bullets = []
+        self.aoe_effect = None
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -24,10 +26,10 @@ class PlayerController:
                 self.shoot()
             elif event.key == pygame.K_g:
                 self.toggle_gravity()
-        # Remove the aim handling from here
+            elif event.key == pygame.K_a:
+                self.activate_aoe()
 
     def update(self):
-        # Add continuous key check here
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
             self.player.aim_angle -= math.radians(ROTATION_SPEED)
@@ -36,6 +38,7 @@ class PlayerController:
 
         self.player.update_state()
         self.update_bullets()
+        self.update_aoe()
 
     def update_bullets(self):
         current_level_offset = self.level_controller.current_level_number * WINDOW_WIDTH
@@ -83,7 +86,22 @@ class PlayerController:
             )
             self.space.gravity = (direction.x * 981, direction.y * 981)
 
+    def activate_aoe(self):
+        if self.powerup_system.has_powerup(PowerUpType.AOE) and not self.aoe_effect:
+            self.aoe_effect = AOEEffect(self.space, self.player.body.position)
+
+    def update_aoe(self):
+        if self.aoe_effect:
+            self.aoe_effect.update()
+            items_collected = self.level_controller.check_aoe_item_collection(self.aoe_effect)
+            for item in items_collected:
+                self.powerup_system.add_powerup(item.powerup_type)
+            if self.aoe_effect.is_finished():
+                self.aoe_effect = None
+
     def draw(self, screen, camera):
         self.player.draw(screen, camera)
         for bullet in self.bullets:
             bullet.draw(screen, camera)
+        if self.aoe_effect:
+            self.aoe_effect.draw(screen, camera)

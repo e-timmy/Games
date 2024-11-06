@@ -4,6 +4,7 @@ class PowerUpType(Enum):
     JUMP = 1
     SHOOT = 2
     GRAVITY = 3
+    AOE = 4
 
 class PowerUpSystem:
     def __init__(self):

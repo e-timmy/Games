@@ -1,6 +1,6 @@
-import pygame
+from constants.game_constants import WINDOW_WIDTH
 from entities.level import Level
-from constants.game_constants import *
+
 
 class LevelController:
     def __init__(self, space):
@@ -10,6 +10,7 @@ class LevelController:
         self.camera_offset = 0
         self.levels = [Level(space, 0), Level(space, 1)]
         self.first_landing = False
+        self.previous_level = None
 
     def check_level_complete(self, player_pos):
         level_boundary = (self.current_level_number + 1) * WINDOW_WIDTH
@@ -24,7 +25,7 @@ class LevelController:
 
     def add_next_level(self):
         next_level_num = self.current_level_number + 2
-        if len(self.levels) < 3:  # Keep only 2-3 levels loaded at a time
+        if len(self.levels) < 3:
             self.levels.append(Level(self.space, next_level_num))
 
     def update(self):
@@ -36,15 +37,24 @@ class LevelController:
         for level in self.levels:
             level.update()
 
+        if self.previous_level:
+            self.previous_level.update()
+
     def complete_transition(self):
         if len(self.levels) > 2:
             oldest_level = self.levels.pop(0)
-            oldest_level.cleanup(self.space)
+            if self.previous_level:  # Clean up the previous-previous level
+                self.previous_level.cleanup(self.space)
+            self.previous_level = oldest_level  # Store the current level as previous
+            self.previous_level.start_wall_descent()  # Start wall descent after transition
+
         self.current_level_number += 1
         self.transitioning = False
         self.camera_offset = 0
 
     def draw(self, screen, camera):
+        if self.previous_level:
+            self.previous_level.draw(screen, camera)
         for level in self.levels:
             level.draw(screen, camera)
 
@@ -52,6 +62,13 @@ class LevelController:
         for level in self.levels:
             for item in level.items:
                 if item.shape == shape and not item.collected:
-                    level.remove_blocking_wall()
-                    return item
-        return None
+                    return item, level
+        return None, None
+
+    def collect_item(self, item, level):
+        if item and not item.collected:
+            item.collected = True
+            if level == self.levels[0]:  # If it's the current level
+                level.start_wall_ascent()
+            return True
+        return False

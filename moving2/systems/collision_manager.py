@@ -8,18 +8,17 @@ class CollisionManager:
     def setup_collisions(self):
         def collect_item(arbiter, space, data):
             item_shape = arbiter.shapes[1]
-            item = self.level_controller.get_item_from_shape(item_shape)
-            if item and not item.collected:
+            item, level = self.level_controller.get_item_from_shape(item_shape)
+            if self.level_controller.collect_item(item, level):
                 self.player_controller.powerup_system.add_powerup(item.powerup_type)
-                item.collected = True
             return True
 
         def bullet_collect_item(arbiter, space, data):
             item_shape = arbiter.shapes[1]
-            item = self.level_controller.get_item_from_shape(item_shape)
+            item, level = self.level_controller.get_item_from_shape(item_shape)
             if item and not item.collected:
-                self.player_controller.powerup_system.add_powerup(item.powerup_type)
-                item.collected = True
+                if self.level_controller.collect_item(item, level):
+                    self.player_controller.powerup_system.add_powerup(item.powerup_type)
             return True
 
         # Player collecting item

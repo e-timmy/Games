@@ -1,0 +1,16 @@
+# Cave Runner
+
+A simple cave running game built with Pygame and Pymunk.
+
+## Installation
+
+1. Ensure you have Python 3.7+ installed.
+2. Install the required packages:
+
+   ```
+   pip install -r requirements.txt
+   ```
+
+## Running the Game
+
+Run the following command in the project directory:
