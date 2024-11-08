@@ -1,6 +1,7 @@
 import pygame
 import math
 import random
+from comet import Comet
 
 
 class ParticleEffect:
@@ -46,7 +47,6 @@ class Obstacle:
         self.points = self.generate_shape()
         self.being_destroyed = False
         self.destruction_effect = None
-        # Create a collision rect that matches the visual representation
         self.collision_rect = self.calculate_collision_rect()
 
     def generate_shape(self):
@@ -60,7 +60,6 @@ class Obstacle:
         return points
 
     def calculate_collision_rect(self):
-        # Calculate the actual bounding box of the shape
         x_coords = [p[0] for p in self.points]
         y_coords = [p[1] for p in self.points]
         min_x, max_x = min(x_coords), max(x_coords)
@@ -77,11 +76,6 @@ class Obstacle:
             adjusted_points = [(x + offset, y) for x, y in self.points]
             pygame.draw.polygon(screen, (100, 100, 100), adjusted_points)
 
-            # Debug visualization of collision rect
-            # adjusted_rect = self.collision_rect.copy()
-            # adjusted_rect.x += offset
-            # pygame.draw.rect(screen, (255, 0, 0), adjusted_rect, 1)
-
     def start_destruction(self):
         self.being_destroyed = True
         self.destruction_effect = ParticleEffect(self.x, self.y)
@@ -94,25 +88,21 @@ class Obstacle:
         return False
 
     def collides_with(self, entity):
-        if hasattr(entity, 'body'):  # Player collision
+        if hasattr(entity, 'body'):
             player_rect = pygame.Rect(
                 entity.body.position.x - entity.size / 2,
                 entity.body.position.y - entity.size / 2,
                 entity.size, entity.size
             )
-
-            # Use the collision rect for checking
             adjusted_rect = self.collision_rect.copy()
             return player_rect.colliderect(adjusted_rect)
-        else:  # Bullet collision
+        else:
             bullet_rect = pygame.Rect(
                 entity.x - entity.radius,
                 entity.y - entity.radius,
                 entity.radius * 2,
                 entity.radius * 2
             )
-
-            # Adjust collision rect for bullet collision
             adjusted_rect = self.collision_rect.copy()
             adjusted_rect.x += entity.game_offset
             return bullet_rect.colliderect(adjusted_rect)
@@ -129,21 +119,24 @@ class Environment:
         self.obstacles = []
         self.destroyed_obstacles = []
         self.segment_width = 20
-        self.scroll_speed = 3
-        self.speed_increment = 0.1
+        self.base_scroll_speed = 1.5
+        self.scroll_speed = self.base_scroll_speed
+        self.speed_increment = 0.05
 
         self.floor_color = (76, 50, 35)
         self.ceiling_color = (66, 40, 25)
-        self.spike_color = (150, 150, 150)
 
         self.floor_base = height * 0.7
         self.ceiling_base = height * 0.3
         self.max_height_change = 30
-        self.spike_chance = 0.1
-        self.spike_length = 20
         self.obstacle_chance = 0.05
 
         self.generate_initial_segments()
+        self.start_time = pygame.time.get_ticks()
+
+        self.comets = []
+        self.comet_spawn_timer = 0
+        self.comet_spawn_interval = 180  # Spawn a comet every 3 seconds (60 fps * 3)
 
     def generate_initial_segments(self):
         self.floor_points = []
@@ -171,11 +164,8 @@ class Environment:
             new_floor_y += adjustment
             new_ceiling_y -= adjustment
 
-        floor_spike = random.random() < self.spike_chance
-        ceiling_spike = random.random() < self.spike_chance
-
-        self.floor_points.append((x, new_floor_y, floor_spike))
-        self.ceiling_points.append((x, new_ceiling_y, ceiling_spike))
+        self.floor_points.append((x, new_floor_y, False))
+        self.ceiling_points.append((x, new_ceiling_y, False))
 
         if random.random() < self.obstacle_chance:
             obstacle_y = random.uniform(new_ceiling_y + 50, new_floor_y - 50)
@@ -183,10 +173,15 @@ class Environment:
             self.obstacles.append(Obstacle(x, obstacle_y, obstacle_size))
 
     def update(self):
+        current_time = pygame.time.get_ticks()
+        time_elapsed = (current_time - self.start_time) / 1000.0
+
+        self.scroll_speed = self.base_scroll_speed + (time_elapsed * self.speed_increment)
+        self.scroll_speed = min(self.scroll_speed, 8)
+
         self.offset -= self.scroll_speed
-        self.difficulty = min(self.difficulty + 0.0003, 2.0)
+        self.difficulty = min(1 + (time_elapsed * 0.05), 2.0)
         self.max_height_change = 30 * self.difficulty
-        self.scroll_speed = 3 + self.difficulty * self.speed_increment
 
         for obstacle in self.destroyed_obstacles[:]:
             if obstacle.update():
@@ -211,12 +206,50 @@ class Environment:
             last_ceiling_y = self.ceiling_points[-1][1]
             rightmost_x = next_x
 
+        # Update and remove off-screen or exploded comets
+        self.comets = [comet for comet in self.comets if
+                       comet.update(self.scroll_speed) and not comet.is_off_screen()]
+
+        # Spawn new comets
+        self.comet_spawn_timer += 1
+        if self.comet_spawn_timer >= self.comet_spawn_interval:
+            self.spawn_comet()
+            self.comet_spawn_timer = 0
+
+        # Check comet collisions with obstacles and player
+        self.check_comet_collisions()
+
+    def spawn_comet(self):
+        self.comets.append(Comet(self.width, self.height, self.offset))
+
+    def check_comet_collisions(self):
+        for comet in self.comets[:]:
+            # Check collision with obstacles
+            for obstacle in self.obstacles[:]:
+                if comet.collides_with(obstacle):
+                    comet.explode()
+                    self.remove_obstacle(obstacle)
+                    break
+
+    def check_wall_collision(self, comet):
+        for points in [self.floor_points, self.ceiling_points]:
+            for i in range(len(points) - 1):
+                x1, y1, _ = points[i]
+                x2, y2, _ = points[i + 1]
+
+                adjusted_x1 = x1 + self.offset
+                adjusted_x2 = x2 + self.offset
+
+                if adjusted_x1 <= comet.x <= adjusted_x2:
+                    if abs(comet.y - y1) < comet.radius:
+                        return True
+
+        return False
+
     def draw(self, screen):
         def draw_section(points, base_y, color, is_floor):
-            visible_points = [(x + self.offset, y) for x, y, spike in points
+            visible_points = [(x + self.offset, y) for x, y, _ in points
                               if -self.segment_width <= x + self.offset <= self.width + self.segment_width]
-            spike_info = [(x + self.offset, spike) for x, y, spike in points
-                          if -self.segment_width <= x + self.offset <= self.width + self.segment_width]
 
             if len(visible_points) >= 2:
                 left_point = (0, visible_points[0][1])
@@ -230,21 +263,15 @@ class Environment:
                 else:
                     pygame.draw.polygon(screen, color, all_points + extended_points[::-1])
 
-                for i, (x, has_spike) in enumerate(spike_info[:-1]):
-                    if has_spike:
-                        next_x = spike_info[i + 1][0]
-                        mid_x = (x + next_x) / 2
-                        y = visible_points[i][1]
-                        spike_tip = y + (self.spike_length if is_floor else -self.spike_length)
-
-                        pygame.draw.polygon(screen, self.spike_color,
-                                            [(x, y), (mid_x, spike_tip), (next_x, y)])
-
         draw_section(self.ceiling_points, 0, self.ceiling_color, False)
         draw_section(self.floor_points, self.height, self.floor_color, True)
 
         for obstacle in self.obstacles + self.destroyed_obstacles:
             obstacle.draw(screen, self.offset)
+
+        # Draw comets
+        for comet in self.comets:
+            comet.draw(screen)
 
     def check_collision(self, player):
         # First, check obstacle collisions
@@ -259,12 +286,12 @@ class Environment:
             )
 
             if player_rect.colliderect(adjusted_obstacle):
-                return True
+                return (True, "obstacle", (adjusted_obstacle.centerx, adjusted_obstacle.centery))
 
         # Then check wall collisions
         for points, is_floor in [(self.floor_points, True), (self.ceiling_points, False)]:
             for i in range(len(points) - 1):
-                x1, y1, has_spike = points[i]
+                x1, y1, _ = points[i]
                 x2, y2, _ = points[i + 1]
 
                 adjusted_x1 = x1 + self.offset
@@ -274,16 +301,15 @@ class Environment:
                     wall_height = y1
                     if (is_floor and player.body.position.y + player.size / 2 > wall_height) or \
                             (not is_floor and player.body.position.y - player.size / 2 < wall_height):
-                        return True
+                        return (True, "wall", (player.body.position.x, wall_height))
 
-                    if has_spike:
-                        mid_x = (adjusted_x1 + adjusted_x2) / 2
-                        if (is_floor and player.body.position.y + player.size / 2 > y1 - self.spike_length) or \
-                                (not is_floor and player.body.position.y - player.size / 2 < y1 + self.spike_length):
-                            if abs(player.body.position.x - mid_x) < self.segment_width / 2:
-                                return True
+        # Check collision with comets
+        for comet in self.comets:
+            if not comet.exploding and comet.collides_with(player):
+                comet.explode()
+                return (True, "comet", (comet.x, comet.y))
 
-        return False
+        return (False, None, None)
 
     def remove_obstacle(self, obstacle):
         if obstacle in self.obstacles:
@@ -294,8 +320,12 @@ class Environment:
     def reset(self):
         self.offset = 0
         self.difficulty = 1
+        self.scroll_speed = self.base_scroll_speed
         self.floor_points = []
         self.ceiling_points = []
         self.obstacles = []
         self.destroyed_obstacles = []
+        self.comets = []
+        self.comet_spawn_timer = 0
         self.generate_initial_segments()
+        self.start_time = pygame.time.get_ticks()

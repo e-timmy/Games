@@ -61,8 +61,12 @@ class Game:
             self.player.update(self.environment.offset)
             self.score = int(pygame.time.get_ticks() - self.start_time) // 1000
 
-            # Check collisions with environment and obstacles
-            if self.environment.check_collision(self.player):
+            if not self.player.death_manager.is_active:
+                collision_result = self.environment.check_collision(self.player)
+                if collision_result[0]:
+                    collision_type, collision_point = collision_result[1], collision_result[2]
+                    self.player.start_death_animation(collision_type, self.environment.offset, collision_point)
+            elif self.player.is_death_animation_complete():
                 self.game_state = GameState.GAME_OVER
 
             # Handle bullet collisions
@@ -72,6 +76,15 @@ class Game:
                         self.environment.remove_obstacle(obstacle)
                         if bullet in self.player.bullets:
                             self.player.bullets.remove(bullet)
+                        break
+
+                # Check bullet collisions with comets
+                for comet in self.environment.comets[:]:
+                    if not comet.exploding and comet.collides_with(bullet):
+                        comet.explode()
+                        if bullet in self.player.bullets:
+                            self.player.bullets.remove(bullet)
+                        self.score += 10  # Bonus points for shooting a comet
                         break
 
     def draw(self):
