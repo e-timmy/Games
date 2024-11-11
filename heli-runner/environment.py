@@ -2,6 +2,7 @@ import pygame
 import math
 import random
 from comet import Comet
+from pickup import ShieldPickup, ScatterShotPickup, SlowDownPickup
 
 
 class ParticleEffect:
@@ -138,6 +139,10 @@ class Environment:
         self.comet_spawn_timer = 0
         self.comet_spawn_interval = 180  # Spawn a comet every 3 seconds (60 fps * 3)
 
+        self.pickups = []
+        self.pickup_spawn_timer = 0
+        self.pickup_spawn_interval = 300  # Spawn a pickup every 5 seconds (60 fps * 5)
+
     def generate_initial_segments(self):
         self.floor_points = []
         self.ceiling_points = []
@@ -173,14 +178,10 @@ class Environment:
             self.obstacles.append(Obstacle(x, obstacle_y, obstacle_size))
 
     def update(self):
-        current_time = pygame.time.get_ticks()
-        time_elapsed = (current_time - self.start_time) / 1000.0
-
-        self.scroll_speed = self.base_scroll_speed + (time_elapsed * self.speed_increment)
-        self.scroll_speed = min(self.scroll_speed, 8)
-
+        # Let the speed be controlled externally
         self.offset -= self.scroll_speed
-        self.difficulty = min(1 + (time_elapsed * 0.05), 2.0)
+        elapsed = (pygame.time.get_ticks() - self.start_time) / 1000.0
+        self.difficulty = min(1 + (elapsed * 0.05), 2.0)
         self.max_height_change = 30 * self.difficulty
 
         for obstacle in self.destroyed_obstacles[:]:
@@ -219,8 +220,81 @@ class Environment:
         # Check comet collisions with obstacles and player
         self.check_comet_collisions()
 
+        # Update and remove off-screen pickups
+        for pickup in self.pickups[:]:
+            if pickup.x + self.offset <= -50:
+                print(f"Removing off-screen pickup of type: {type(pickup).__name__} at position x:{pickup.x + self.offset}")
+        self.pickups = [pickup for pickup in self.pickups if pickup.x + self.offset > -50]
+        for pickup in self.pickups:
+            pickup.update()
+
+        # Spawn new pickups
+        self.pickup_spawn_timer += 1
+        if self.pickup_spawn_timer >= self.pickup_spawn_interval:
+            self.spawn_pickup()
+            self.pickup_spawn_timer = 0
+
     def spawn_comet(self):
         self.comets.append(Comet(self.width, self.height, self.offset))
+
+    def get_safe_spawn_position(self):
+        """Get a safe position within the cave for spawning pickups"""
+        # Find the rightmost visible segment
+        x = self.width + abs(self.offset)
+
+        # Find the floor and ceiling heights at this position
+        floor_height = None
+        ceiling_height = None
+
+        for i in range(len(self.floor_points) - 1):
+            x1, y1, _ = self.floor_points[i]
+            x2, y2, _ = self.floor_points[i + 1]
+            if x1 <= x <= x2:
+                # Interpolate floor height
+                t = (x - x1) / (x2 - x1)
+                floor_height = y1 + t * (y2 - y1)
+                break
+
+        for i in range(len(self.ceiling_points) - 1):
+            x1, y1, _ = self.ceiling_points[i]
+            x2, y2, _ = self.ceiling_points[i + 1]
+            if x1 <= x <= x2:
+                # Interpolate ceiling height
+                t = (x - x1) / (x2 - x1)
+                ceiling_height = y1 + t * (y2 - y1)
+                break
+
+        if floor_height is None or ceiling_height is None:
+            return None, None
+
+        # Calculate safe zone (with padding)
+        padding = 40  # Increased padding for safety
+        safe_min_y = ceiling_height + padding
+        safe_max_y = floor_height - padding
+
+        # Ensure there's enough space
+        if safe_max_y - safe_min_y < padding * 2:
+            return None, None
+
+        # Check for obstacles in spawn area
+        spawn_area_rect = pygame.Rect(x - padding, safe_min_y, padding * 2, safe_max_y - safe_min_y)
+
+        for obstacle in self.obstacles:
+            if obstacle.collision_rect.colliderect(spawn_area_rect):
+                return None, None
+
+        # Return position in middle of safe zone
+        y = (safe_min_y + safe_max_y) / 2
+        return x, y
+
+    def spawn_pickup(self):
+        x, y = self.get_safe_spawn_position()
+        if x is not None and y is not None:
+            # Randomly choose between shield, scatter shot, and slow down
+            pickup_type = random.choices([ShieldPickup, ScatterShotPickup, SlowDownPickup], weights=[0.4, 0.4, 0.2])[0]
+            print(f"Spawning pickup of type: {pickup_type.__name__}")
+            self.pickups.append(pickup_type(x, y))
+            print(f"Current pickups: {[type(p).__name__ for p in self.pickups]}")
 
     def check_comet_collisions(self):
         for comet in self.comets[:]:
@@ -273,8 +347,18 @@ class Environment:
         for comet in self.comets:
             comet.draw(screen)
 
+        # Draw pickups
+        for pickup in self.pickups:
+            pickup.draw(screen, self.offset)
+
     def check_collision(self, player):
-        # First, check obstacle collisions
+        # In test mode, we still want to check collisions but not return them
+        # This allows us to track logic without causing death
+        collision_detected = False
+        collision_type = None
+        collision_point = None
+
+        # Check obstacle collisions
         for obstacle in self.obstacles:
             adjusted_obstacle = obstacle.collision_rect.copy()
             adjusted_obstacle.x += self.offset
@@ -286,30 +370,43 @@ class Environment:
             )
 
             if player_rect.colliderect(adjusted_obstacle):
-                return (True, "obstacle", (adjusted_obstacle.centerx, adjusted_obstacle.centery))
+                collision_detected = True
+                collision_type = "obstacle"
+                collision_point = (adjusted_obstacle.centerx, adjusted_obstacle.centery)
+                break
 
-        # Then check wall collisions
-        for points, is_floor in [(self.floor_points, True), (self.ceiling_points, False)]:
-            for i in range(len(points) - 1):
-                x1, y1, _ = points[i]
-                x2, y2, _ = points[i + 1]
+        # Check wall collisions
+        if not collision_detected:
+            for points, is_floor in [(self.floor_points, True), (self.ceiling_points, False)]:
+                for i in range(len(points) - 1):
+                    x1, y1, _ = points[i]
+                    x2, y2, _ = points[i + 1]
 
-                adjusted_x1 = x1 + self.offset
-                adjusted_x2 = x2 + self.offset
+                    adjusted_x1 = x1 + self.offset
+                    adjusted_x2 = x2 + self.offset
 
-                if adjusted_x1 <= player.body.position.x <= adjusted_x2:
-                    wall_height = y1
-                    if (is_floor and player.body.position.y + player.size / 2 > wall_height) or \
-                            (not is_floor and player.body.position.y - player.size / 2 < wall_height):
-                        return (True, "wall", (player.body.position.x, wall_height))
+                    if adjusted_x1 <= player.body.position.x <= adjusted_x2:
+                        wall_height = y1
+                        if (is_floor and player.body.position.y + player.size / 2 > wall_height) or \
+                                (not is_floor and player.body.position.y - player.size / 2 < wall_height):
+                            collision_detected = True
+                            collision_type = "wall"
+                            collision_point = (player.body.position.x, wall_height)
+                            break
+                if collision_detected:
+                    break
 
         # Check collision with comets
-        for comet in self.comets:
-            if not comet.exploding and comet.collides_with(player):
-                comet.explode()
-                return (True, "comet", (comet.x, comet.y))
+        if not collision_detected:
+            for comet in self.comets:
+                if not comet.exploding and comet.collides_with(player):
+                    comet.explode()
+                    collision_detected = True
+                    collision_type = "comet"
+                    collision_point = (comet.x, comet.y)
+                    break
 
-        return (False, None, None)
+        return (collision_detected, collision_type, collision_point)
 
     def remove_obstacle(self, obstacle):
         if obstacle in self.obstacles:
@@ -327,5 +424,7 @@ class Environment:
         self.destroyed_obstacles = []
         self.comets = []
         self.comet_spawn_timer = 0
+        self.pickups = []
+        self.pickup_spawn_timer = 0
         self.generate_initial_segments()
         self.start_time = pygame.time.get_ticks()
