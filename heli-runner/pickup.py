@@ -50,6 +50,33 @@ class ShieldPickup(Pickup):
         # Center dot
         pygame.draw.circle(screen, self.color, (adjusted_x, adjusted_y), 3)
 
+class AutoPilotPickup(Pickup):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        self.color = (255, 255, 255)  # White color
+        self.radius = 20
+
+    def draw(self, screen, offset):
+        adjusted_x = int(self.x + offset)
+        adjusted_y = int(self.y)
+
+        # Draw outer circle
+        pygame.draw.circle(screen, self.color, (adjusted_x, adjusted_y), self.radius, 2)
+
+        # Draw "A" symbol
+        angle = math.radians(self.rotation)
+        points = []
+        for i in range(3):
+            point_angle = angle + (2 * math.pi * i / 3)
+            point_x = adjusted_x + int((self.radius - 5) * math.cos(point_angle))
+            point_y = adjusted_y + int((self.radius - 5) * math.sin(point_angle))
+            points.append((point_x, point_y))
+
+        pygame.draw.lines(screen, self.color, True, points, 2)
+        center_x = sum(p[0] for p in points) // 3
+        center_y = sum(p[1] for p in points) // 3
+        pygame.draw.circle(screen, self.color, (center_x, center_y), 3)
+
 
 class ScatterShotPickup(Pickup):
     def __init__(self, x, y):

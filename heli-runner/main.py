@@ -4,7 +4,7 @@ import sys
 from game_state import GameState
 from player import Player
 from environment import Environment
-from pickup import ShieldPickup, ScatterShotPickup, SlowDownPickup
+from pickup import ShieldPickup, ScatterShotPickup, SlowDownPickup, AutoPilotPickup
 
 
 class Game:
@@ -31,8 +31,8 @@ class Game:
 
         self.initial_scroll_speed = self.environment.base_scroll_speed
         self.speed_increase_rate = self.environment.speed_increment
-        self.speed_slowdown_factor = 1.0  # New variable to track slowdown
-        self.game_time_started = 0        # Track when game started
+        self.speed_slowdown_factor = 1.0
+        self.game_time_started = 0
 
     def run(self):
         while True:
@@ -53,15 +53,18 @@ class Game:
                 self.start_game()
             elif self.game_state == GameState.GAME_OVER and event.key == pygame.K_SPACE:
                 self.restart_game()
-            elif self.game_state == GameState.PLAYING and event.key == pygame.K_RETURN:
-                self.player.shoot(self.environment.offset)
-            elif self.game_state == GameState.PLAYING and event.key == pygame.K_o:
-                self.activate_slow_down()
-
-        if self.game_state == GameState.PLAYING:
-            keys = pygame.key.get_pressed()
-            if keys[pygame.K_SPACE]:
-                self.player.apply_thrust()
+            elif self.game_state == GameState.PLAYING:
+                if event.key == pygame.K_RETURN:
+                    self.player.shoot(self.environment.offset)
+                elif event.key == pygame.K_o:
+                    self.activate_slow_down()
+                elif event.key == pygame.K_p:
+                    # Scatter shot activation moved here
+                    visible_obstacles = [obs for obs in self.environment.obstacles
+                                       if 0 <= obs.x + self.environment.offset <= self.width]
+                    self.player.activate_scatter(self.environment.offset, visible_obstacles)
+                elif event.key == pygame.K_i:
+                    self.player.activate_autopilot()
 
         # Check for Shift key to enable/disable test mode
         keys = pygame.key.get_pressed()
@@ -73,7 +76,7 @@ class Game:
             elapsed_time = (pygame.time.get_ticks() - self.start_time) / 1000.0
             self.update_scroll_speed(elapsed_time)
             self.environment.update()
-            self.player.update(self.environment.offset)
+            self.player.update(self.environment.offset, self.environment)
             self.score = int(elapsed_time)
 
             if not self.test_mode:
@@ -97,6 +100,25 @@ class Game:
                     self.width // 4,
                     max(self.player.size // 2, min(self.height - self.player.size // 2, self.player.body.position.y))
                 )
+
+            # Check pickup collisions
+            for pickup in self.environment.pickups[:]:
+                # Temporarily adjust pickup x position by offset for collision check
+                pickup.x += self.environment.offset
+                if pickup.collides_with(self.player):
+                    print(f"Player collided with pickup of type: {type(pickup).__name__}")
+                    if isinstance(pickup, ShieldPickup) and not self.player.has_shield:
+                        self.player.add_shield()
+                    elif isinstance(pickup, ScatterShotPickup) and not self.player.has_scatter:
+                        self.player.add_scatter()
+                    elif isinstance(pickup, SlowDownPickup) and not self.player.has_slow_down:
+                        self.player.add_slow_down()
+                    elif isinstance(pickup,
+                                    AutoPilotPickup) and not self.player.has_autopilot and not self.player.autopilot_active:
+                        self.player.add_autopilot()
+                        print(f"Player collected autopilot pickup")
+                    self.environment.pickups.remove(pickup)
+                pickup.x -= self.environment.offset  # Restore original position
 
             # Handle bullet collisions
             for bullet in self.player.bullets[:]:
@@ -148,14 +170,10 @@ class Game:
         elif self.game_state == GameState.PLAYING:
             self.environment.draw(self.screen)
             self.player.draw(self.screen)
+            self.player.draw_autopilot_indicator(self.screen)  # Add this line
             self.draw_score()
             if self.test_mode:
                 self.draw_test_mode_indicator()
-            if pygame.time.get_ticks() / 1000.0 - self.game_time_started < 2.0:  # Show indicator for 2 seconds after slowdown
-                current_speed = self.environment.scroll_speed
-                speed_text = f"Speed: {current_speed:.2f}"
-                speed_surface = self.font.render(speed_text, True, (0, 255, 0))
-                self.screen.blit(speed_surface, (self.width - speed_surface.get_width() - 10, 50))
         elif self.game_state == GameState.GAME_OVER:
             self.draw_menu(f"Game Over! Score: {self.score}\nPress SPACE to Restart")
 

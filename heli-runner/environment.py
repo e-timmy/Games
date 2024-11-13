@@ -2,7 +2,7 @@ import pygame
 import math
 import random
 from comet import Comet
-from pickup import ShieldPickup, ScatterShotPickup, SlowDownPickup
+from pickup import ShieldPickup, ScatterShotPickup, SlowDownPickup, AutoPilotPickup
 
 
 class ParticleEffect:
@@ -127,9 +127,24 @@ class Environment:
         self.floor_color = (76, 50, 35)
         self.ceiling_color = (66, 40, 25)
 
-        self.floor_base = height * 0.7
-        self.ceiling_base = height * 0.3
-        self.max_height_change = 30
+        # Terrain difficulty attributes
+        self.terrain_difficulty = 0.0
+        self.terrain_difficulty_increment = 0.0001  # Increase per frame
+        self.max_terrain_difficulty = 1.0
+
+        # Dynamic terrain parameters
+        self.initial_floor_base = height * 0.9  # Start very low
+        self.initial_ceiling_base = height * 0.1  # Start very high
+        self.final_floor_base = height * 0.7  # End position
+        self.final_ceiling_base = height * 0.3  # End position
+
+        self.initial_max_height_change = 5  # Start with minimal waviness
+        self.final_max_height_change = 40  # End with more waviness
+
+        self.floor_base = self.initial_floor_base
+        self.ceiling_base = self.initial_ceiling_base
+        self.max_height_change = self.initial_max_height_change
+
         self.obstacle_chance = 0.05
 
         self.generate_initial_segments()
@@ -137,11 +152,22 @@ class Environment:
 
         self.comets = []
         self.comet_spawn_timer = 0
-        self.comet_spawn_interval = 180  # Spawn a comet every 3 seconds (60 fps * 3)
+        self.comet_spawn_interval = 180
 
         self.pickups = []
         self.pickup_spawn_timer = 0
-        self.pickup_spawn_interval = 300  # Spawn a pickup every 5 seconds (60 fps * 5)
+        self.pickup_spawn_interval = 300
+
+    def update_terrain_parameters(self):
+        # Update base positions
+        self.floor_base = self.initial_floor_base + (
+                    self.final_floor_base - self.initial_floor_base) * self.terrain_difficulty
+        self.ceiling_base = self.initial_ceiling_base + (
+                    self.final_ceiling_base - self.initial_ceiling_base) * self.terrain_difficulty
+
+        # Update waviness
+        self.max_height_change = self.initial_max_height_change + (
+                    self.final_max_height_change - self.initial_max_height_change) * self.terrain_difficulty
 
     def generate_initial_segments(self):
         self.floor_points = []
@@ -157,13 +183,21 @@ class Environment:
             last_ceiling_y = self.ceiling_points[-1][1]
 
     def generate_segment_at(self, x, last_floor_y, last_ceiling_y):
-        floor_change = random.randint(int(-self.max_height_change), int(self.max_height_change))
-        new_floor_y = max(min(last_floor_y + floor_change, self.height - 100), self.height * 0.6)
+        # Calculate change magnitude based on difficulty
+        current_max_change = self.max_height_change * (0.5 + 0.5 * math.sin(x * 0.01 * (1 + self.terrain_difficulty)))
 
-        ceiling_change = random.randint(int(-self.max_height_change), int(self.max_height_change))
-        new_ceiling_y = max(min(last_ceiling_y + ceiling_change, self.height * 0.4), 100)
+        floor_change = random.randint(int(-current_max_change), int(current_max_change))
+        new_floor_y = last_floor_y + floor_change
 
-        min_gap = 150
+        ceiling_change = random.randint(int(-current_max_change), int(current_max_change))
+        new_ceiling_y = last_ceiling_y + ceiling_change
+
+        # Ensure floor and ceiling stay within bounds
+        new_floor_y = max(min(new_floor_y, self.height - 50), self.floor_base - current_max_change)
+        new_ceiling_y = max(min(new_ceiling_y, self.ceiling_base + current_max_change), 50)
+
+        # Ensure minimum gap between floor and ceiling (adjusted by difficulty)
+        min_gap = 150 * (1 - (self.terrain_difficulty * 0.3))  # Gap shrinks as difficulty increases
         if new_floor_y - new_ceiling_y < min_gap:
             adjustment = (min_gap - (new_floor_y - new_ceiling_y)) / 2
             new_floor_y += adjustment
@@ -178,11 +212,14 @@ class Environment:
             self.obstacles.append(Obstacle(x, obstacle_y, obstacle_size))
 
     def update(self):
-        # Let the speed be controlled externally
+        # Update terrain difficulty
+        self.terrain_difficulty = min(self.terrain_difficulty + self.terrain_difficulty_increment,
+                                      self.max_terrain_difficulty)
+        self.update_terrain_parameters()
+
         self.offset -= self.scroll_speed
         elapsed = (pygame.time.get_ticks() - self.start_time) / 1000.0
         self.difficulty = min(1 + (elapsed * 0.05), 2.0)
-        self.max_height_change = 30 * self.difficulty
 
         for obstacle in self.destroyed_obstacles[:]:
             if obstacle.update():
@@ -207,28 +244,24 @@ class Environment:
             last_ceiling_y = self.ceiling_points[-1][1]
             rightmost_x = next_x
 
-        # Update and remove off-screen or exploded comets
         self.comets = [comet for comet in self.comets if
                        comet.update(self.scroll_speed) and not comet.is_off_screen()]
 
-        # Spawn new comets
         self.comet_spawn_timer += 1
         if self.comet_spawn_timer >= self.comet_spawn_interval:
             self.spawn_comet()
             self.comet_spawn_timer = 0
 
-        # Check comet collisions with obstacles and player
         self.check_comet_collisions()
 
-        # Update and remove off-screen pickups
         for pickup in self.pickups[:]:
             if pickup.x + self.offset <= -50:
-                print(f"Removing off-screen pickup of type: {type(pickup).__name__} at position x:{pickup.x + self.offset}")
+                print(
+                    f"Removing off-screen pickup of type: {type(pickup).__name__} at position x:{pickup.x + self.offset}")
         self.pickups = [pickup for pickup in self.pickups if pickup.x + self.offset > -50]
         for pickup in self.pickups:
             pickup.update()
 
-        # Spawn new pickups
         self.pickup_spawn_timer += 1
         if self.pickup_spawn_timer >= self.pickup_spawn_interval:
             self.spawn_pickup()
@@ -290,8 +323,10 @@ class Environment:
     def spawn_pickup(self):
         x, y = self.get_safe_spawn_position()
         if x is not None and y is not None:
-            # Randomly choose between shield, scatter shot, and slow down
-            pickup_type = random.choices([ShieldPickup, ScatterShotPickup, SlowDownPickup], weights=[0.4, 0.4, 0.2])[0]
+            pickup_type = random.choices(
+                [AutoPilotPickup],
+                weights=[1.0]
+            )[0]
             print(f"Spawning pickup of type: {pickup_type.__name__}")
             self.pickups.append(pickup_type(x, y))
             print(f"Current pickups: {[type(p).__name__ for p in self.pickups]}")
@@ -417,6 +452,7 @@ class Environment:
     def reset(self):
         self.offset = 0
         self.difficulty = 1
+        self.terrain_difficulty = 0.0
         self.scroll_speed = self.base_scroll_speed
         self.floor_points = []
         self.ceiling_points = []
@@ -426,5 +462,6 @@ class Environment:
         self.comet_spawn_timer = 0
         self.pickups = []
         self.pickup_spawn_timer = 0
+        self.update_terrain_parameters()
         self.generate_initial_segments()
         self.start_time = pygame.time.get_ticks()
