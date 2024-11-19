@@ -3,7 +3,6 @@ from game_state import GameState
 from game import Game
 from menu import Menu
 
-
 class Main:
     def __init__(self):
         pygame.init()
@@ -11,9 +10,9 @@ class Main:
         pygame.display.set_caption("Chicken Crossing")
         self.clock = pygame.time.Clock()
         self.state = GameState.MENU
-        self.game = Game(self.screen)
+        self.game = None
         self.menu = Menu(self.screen)
-        self.waiting_for_key_release = False  # Add this flag
+        self.waiting_for_key_release = False
 
     def run(self):
         running = True
@@ -26,19 +25,24 @@ class Main:
 
             # Wait for key release before processing new state
             if self.waiting_for_key_release:
-                if not keys[pygame.K_SPACE]:
+                if not keys[pygame.K_SPACE] and not keys[pygame.K_RETURN]:
                     self.waiting_for_key_release = False
                 continue
 
             if self.state == GameState.MENU:
-                self.state = self.menu.update()
-                if self.state == GameState.PLAYING:
-                    self.game = Game(self.screen)  # Create new game instance
+                new_state = self.menu.update()
+                if new_state == GameState.PLAYING:
+                    selected_level = self.menu.get_selected_level()
+                    self.game = Game(self.screen)
+                    self.game.current_level = selected_level
+                    self.game.reset(show_message=True)
+                    self.state = GameState.PLAYING
+                    self.waiting_for_key_release = True
             elif self.state == GameState.PLAYING:
                 new_state = self.game.update()
                 if new_state != GameState.PLAYING:  # State change requested
                     self.state = new_state
-                    self.waiting_for_key_release = True  # Wait for key release
+                    self.waiting_for_key_release = True
             elif self.state == GameState.RETRY:
                 self.state = GameState.MENU
                 self.waiting_for_key_release = True
@@ -47,7 +51,6 @@ class Main:
             self.clock.tick(60)
 
         pygame.quit()
-
 
 if __name__ == "__main__":
     game = Main()

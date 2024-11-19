@@ -1,23 +1,24 @@
-
 import pygame
+import random
+import math
 from player import Player
-from vehicle import Vehicle
 from game_state import GameState
 from level_generator import generate_level
-import random
+from vehicle import Vehicle
+from river import River, Log, Lilypad
 
 
 class Game:
     def __init__(self, screen):
         self.screen = screen
         self.current_level = 1
+        self.screen_width = 800
         self.screen_height = 600
-        self.road_height = 300
+        self.road_height = 200
+        self.river_height = 0
         self.level_start_time = 0
         self.level_message = ""
         self.game_over = False
-        # Base values for vehicle generation
-        self.vehicles_per_lane = 3  # Target number of vehicles per lane
         self.spawn_timer = 0
         self.reset(show_message=True)
 
@@ -28,26 +29,50 @@ class Game:
 
         self.level_config = generate_level(self.current_level)
 
-        # Calculate road positions
-        self.road_top = (self.screen_height - self.road_height) // 2
+        # Calculate road and river positions
+        if self.current_level <= 5:
+            self.road_top = (self.screen_height - self.road_height) // 2
+            self.river_height = 0
+            self.river_lanes = 0
+        else:
+            self.river_lanes = min(self.current_level - 5, 3)  # Start with 1 lane, max 3 lanes
+            self.river_height = 60 * self.river_lanes  # Each river lane is 60 pixels high
+            total_height = self.road_height + self.river_height
+            total_top = (self.screen_height - total_height) // 2
+            self.road_top = total_top + self.river_height
+
         self.road_bottom = self.road_top + self.road_height
+        self.river_top = self.road_top - self.river_height
+        self.river_bottom = self.road_top
 
         # Calculate lane positions
-        lane_spacing = self.road_height / self.level_config.num_lanes
+        self.lane_height = self.road_height // self.level_config.num_lanes
         self.lanes = [
-            self.road_top + (i + 0.5) * lane_spacing
+            self.road_top + (i * self.lane_height) + (self.lane_height // 2)
             for i in range(self.level_config.num_lanes)
         ]
 
         # Initialize lane directions and speeds
         self.lane_directions = [random.choice([-1, 1]) for _ in range(self.level_config.num_lanes)]
 
+        # Calculate target vehicles per lane based on level
+        base_vehicles = 2  # Base number of vehicles per lane
+        level_multiplier = 1 + (self.current_level - 1) * 0.2  # 20% increase per level
+        self.target_vehicles_per_lane = min(base_vehicles * level_multiplier, 4)  # Cap at 4 vehicles per lane
+        self.target_total_vehicles = int(self.target_vehicles_per_lane * self.level_config.num_lanes)
+
         # Initialize game objects
-        self.player = Player(400, self.road_bottom + 50)
+        self.player = Player(self.screen_width // 2, self.road_bottom + 50)
         self.vehicles = []
         self.spawn_timer = 0
         self.victory_timer = 0
         self.showing_level_complete = False
+
+        # Initialize river (after level 5)
+        if self.current_level > 5:
+            self.river = River(self.river_top, self.river_height, self.river_lanes)
+        else:
+            self.river = None
 
         # Generate level message
         if show_message:
@@ -57,13 +82,33 @@ class Game:
         # Spawn initial vehicles
         self.spawn_initial_vehicles()
 
+    def get_lane_vehicle_count(self, lane_idx):
+        return sum(1 for v in self.vehicles if abs(v.y - self.lanes[lane_idx]) < 5)
+
+    def get_lane_spacing(self, lane_idx):
+        # Get all vehicles in the lane
+        lane_vehicles = [v for v in self.vehicles if abs(v.y - self.lanes[lane_idx]) < 5]
+        if not lane_vehicles:
+            return float('inf')
+
+        # Sort vehicles by x position
+        lane_vehicles.sort(key=lambda v: v.x)
+
+        # Calculate minimum spacing between consecutive vehicles
+        min_spacing = float('inf')
+        for i in range(len(lane_vehicles) - 1):
+            spacing = abs(lane_vehicles[i + 1].x - lane_vehicles[i].x)
+            min_spacing = min(min_spacing, spacing)
+
+        return min_spacing
+
     def spawn_initial_vehicles(self):
-        # Spawn about the same number of vehicles we want to maintain
         for lane in range(len(self.lanes)):
-            # Spawn 2-3 vehicles per lane initially
-            num_vehicles = random.randint(2, 3)
+            # Calculate number of vehicles based on level
+            num_vehicles = int(self.target_vehicles_per_lane)
             spawned = 0
             attempts = 0
+            min_spacing = 200  # Minimum spacing between vehicles
 
             while spawned < num_vehicles and attempts < 10:
                 direction = self.lane_directions[lane]
@@ -73,50 +118,58 @@ class Game:
 
                 # Space vehicles evenly across the screen
                 segment_width = 800 // num_vehicles
-                base_x = spawned * segment_width
-                x = random.randint(base_x, base_x + segment_width - 100)
-
-                # Adjust x based on direction for natural flow
-                if direction < 0:
-                    x = 800 - x
+                x = random.randint(spawned * segment_width, (spawned + 1) * segment_width - 100)
 
                 # Check for minimum spacing
-                if not any(abs(v.x - x) < 150 for v in self.vehicles if abs(v.y - self.lanes[lane]) < 5):
+                if not any(abs(v.x - x) < min_spacing for v in self.vehicles if abs(v.y - self.lanes[lane]) < 5):
                     self.vehicles.append(Vehicle(x, self.lanes[lane], speed, vehicle_type))
                     spawned += 1
                 attempts += 1
 
+        # Ensure at least one vehicle per lane
+        for lane in range(len(self.lanes)):
+            if not any(v.y == self.lanes[lane] for v in self.vehicles):
+                direction = self.lane_directions[lane]
+                speed = random.uniform(self.level_config.min_speed,
+                                       self.level_config.max_speed) * direction
+                vehicle_type = random.choice(self.level_config.vehicle_types)
+                x = random.randint(0, 700)  # Spawn within screen bounds
+                self.vehicles.append(Vehicle(x, self.lanes[lane], speed, vehicle_type))
+
     def spawn_vehicle(self):
-        # Only spawn if we're below target vehicle count
-        vehicles_per_lane = {lane: 0 for lane in range(len(self.lanes))}
-        for vehicle in self.vehicles:
-            for lane_idx, lane_y in enumerate(self.lanes):
-                if abs(vehicle.y - lane_y) < 5:
-                    vehicles_per_lane[lane_idx] += 1
+        # Calculate the current number of vehicles
+        current_vehicles = len(self.vehicles)
 
-        # Find lanes that need more vehicles
-        eligible_lanes = [lane for lane, count in vehicles_per_lane.items()
-                          if count < self.vehicles_per_lane]
+        # Calculate the probability of spawning based on the difference from the target
+        spawn_probability = max(0, min(1, (self.target_total_vehicles - current_vehicles) / self.target_total_vehicles))
 
-        if eligible_lanes:
-            lane = random.choice(eligible_lanes)
+        # Attempt to spawn based on probability
+        if random.random() < spawn_probability:
+            # Choose a random lane
+            lane = random.randint(0, len(self.lanes) - 1)
             direction = self.lane_directions[lane]
             speed = random.uniform(self.level_config.min_speed,
                                    self.level_config.max_speed) * direction
             vehicle_type = random.choice(self.level_config.vehicle_types)
 
+            # Spawn position based on direction
             x = -100 if direction > 0 else 900
 
-            # Check if there's enough space to spawn
+            # Check minimum spacing from edge
+            min_edge_spacing = 200  # Minimum spacing from screen edge
             vehicles_in_lane = [v for v in self.vehicles if abs(v.y - self.lanes[lane]) < 5]
-            if not vehicles_in_lane or min(abs(v.x - x) for v in vehicles_in_lane) > 150:
+
+            if direction > 0:
+                near_edge = [v for v in vehicles_in_lane if v.x < min_edge_spacing]
+            else:
+                near_edge = [v for v in vehicles_in_lane if v.x > 800 - min_edge_spacing]
+
+            if not near_edge:  # Only spawn if there's no vehicle near the edge
                 self.vehicles.append(Vehicle(x, self.lanes[lane], speed, vehicle_type))
 
     def update(self):
         if self.game_over:
-            # Draw game state before overlay
             self.draw_game_state()
-            # Draw semi-transparent overlay
             overlay = pygame.Surface((800, 600))
             overlay.fill((0, 0, 0))
             overlay.set_alpha(128)
@@ -134,7 +187,7 @@ class Game:
 
             keys = pygame.key.get_pressed()
             if keys[pygame.K_SPACE]:
-                self.current_level = 1  # Reset to level 1
+                self.current_level = 1
                 return GameState.MENU
             return GameState.PLAYING
 
@@ -143,23 +196,68 @@ class Game:
     def update_game(self):
         self.draw_game_state()
 
-        # Update and check collisions
         if not self.game_over:
-            self.player.update(self.lanes)
+            prev_y = self.player.y
+            self.player.update(self.lanes, self.river_top if self.river else None,
+                               self.river_bottom if self.river else None)
+            self.spawn_vehicle()
 
-            # Spawn check
-            self.spawn_timer += 1
-            if self.spawn_timer >= self.level_config.spawn_rate:
-                self.spawn_vehicle()
-                self.spawn_timer = 0
+            if self.river:
+                self.river.update()
+                # Check if player is in river area
+                if self.river_top <= self.player.y <= self.river_bottom:
+                    current_log = self.river.get_log_at(self.player.x, self.player.y)
+                    current_lilypad = self.river.get_lilypad_at(self.player.x, self.player.y)
 
-            # Victory check
-            if self.player.y < self.road_top:
+                    if self.player.is_moving:
+                        # Player is still moving, don't check for death
+                        if current_log:
+                            self.player.on_log = True
+                            self.player.on_lilypad = False
+                        elif current_lilypad and not current_lilypad.is_submerged():
+                            self.player.on_log = False
+                            self.player.on_lilypad = True
+                            if not current_lilypad.sinking:
+                                current_lilypad.start_sinking()
+                    else:
+                        # Player has finished moving
+                        if current_log:
+                            self.player.on_log = True
+                            self.player.on_lilypad = False
+                            self.player.move_on_log(current_log.speed)
+                        elif current_lilypad and not current_lilypad.is_submerged():
+                            self.player.on_log = False
+                            self.player.on_lilypad = True
+                            self.player.move_on_lilypad(current_lilypad.speed)
+                            if not current_lilypad.sinking:
+                                current_lilypad.start_sinking()
+                        elif not self.player.test_mode:
+                            # Player is in water without a log or lilypad after movement
+                            self.game_over = True
+
+                # Adjust player's y-position to the center of the river lane
+                if self.river_top <= self.player.y <= self.river_bottom and not self.player.is_moving:
+                    river_lane = int((self.player.y - self.river_top) / self.river.lane_height)
+                    self.player.y = self.river.get_lane_center(river_lane)
+
+                # Check if player is moving from land to river
+                if prev_y < self.river_top <= self.player.y:
+                    # Snap to the first river lane center
+                    self.player.y = self.river.get_lane_center(0)
+                    self.player.on_log = bool(self.river.get_log_at(self.player.x, self.player.y))
+                    self.player.on_lilypad = bool(self.river.get_lilypad_at(self.player.x, self.player.y))
+
+                # Check if player is moving from river to land
+                elif self.river_top <= prev_y < self.river_top:
+                    self.player.on_log = False
+                    self.player.on_lilypad = False
+
+            if self.player.y < (self.river_top if self.river else self.road_top):
                 if not self.showing_level_complete:
                     self.victory_timer += 1
                     if self.victory_timer >= 30:
                         self.showing_level_complete = True
-                        self.player.start_celebration()  # Start celebration animation
+                        self.player.start_celebration()
 
                 if self.showing_level_complete:
                     self.draw_overlay(f"Level {self.current_level} Complete!")
@@ -171,13 +269,19 @@ class Game:
         return GameState.PLAYING
 
     def draw_game_state(self):
-        # Draw background and road
-        self.screen.fill((100, 200, 100))
-        pygame.draw.rect(self.screen, (80, 80, 80),
+        # Draw background
+        self.screen.fill((100, 200, 100))  # Grass color
+
+        # Draw river (if exists)
+        if self.river:
+            self.river.draw(self.screen)
+
+        # Draw road
+        pygame.draw.rect(self.screen, (80, 80, 80),  # Road color
                          (0, self.road_top, 800, self.road_height))
 
         # Draw lane markers
-        for y in range(self.road_top, self.road_bottom, self.road_height // self.level_config.num_lanes):
+        for y in range(self.road_top, self.road_bottom, self.lane_height):
             pygame.draw.line(self.screen, (255, 255, 255),
                              (0, y), (800, y), 2)
 
@@ -189,10 +293,27 @@ class Game:
             vehicle.update()
             vehicle.draw(self.screen)
 
+            # Remove vehicles that are off screen
             if vehicle.x < -200 or vehicle.x > 1000:
                 self.vehicles.remove(vehicle)
-            elif vehicle.collides_with(self.player) and not self.game_over:
+            # Only trigger game over if not in test mode
+            elif vehicle.collides_with(self.player) and not self.game_over and not self.player.test_mode:
                 self.game_over = True
+
+        # Draw test mode indicator
+        if self.player.test_mode:
+            font = pygame.font.Font(None, 24)
+            text = font.render("Test Mode", True, (255, 255, 255))
+            text_rect = text.get_rect(topright=(790, 10))
+
+            # Draw background for better visibility
+            bg_rect = text_rect.copy()
+            bg_rect.inflate_ip(10, 6)
+            bg_surface = pygame.Surface((bg_rect.width, bg_rect.height))
+            bg_surface.fill((0, 0, 0))
+            bg_surface.set_alpha(128)
+            self.screen.blit(bg_surface, bg_rect)
+            self.screen.blit(text, text_rect)
 
     def draw_overlay(self, message):
         overlay = pygame.Surface((800, 600))
@@ -217,25 +338,25 @@ class Game:
         self.screen.blit(instruction, instruction_rect)
 
     def draw_level_message(self):
-        if pygame.time.get_ticks() - self.level_start_time < 3000:  # Show for 3 seconds
+        if pygame.time.get_ticks() - self.level_start_time < 3000:
             font = pygame.font.Font(None, 36)
             text = font.render(self.level_message, True, (255, 255, 255))
             text_rect = text.get_rect(center=(400, 50))
 
-            # Draw semi-transparent background for text
             bg_rect = text_rect.copy()
             bg_rect.inflate_ip(20, 10)
             bg_surface = pygame.Surface((bg_rect.width, bg_rect.height))
             bg_surface.fill((0, 0, 0))
             bg_surface.set_alpha(128)
             self.screen.blit(bg_surface, bg_rect)
-
             self.screen.blit(text, text_rect)
 
     def generate_level_message(self, prev_num_lanes, prev_speed):
         messages = []
         if self.current_level == 1:
             return "Level 1 - Cross the road!"
+        if self.current_level == 6:
+            return "Level 6 - Watch out for the river and lilypads!"
 
         if self.level_config.num_lanes > prev_num_lanes:
             messages.append(f"Added lane! Now {self.level_config.num_lanes} lanes")
