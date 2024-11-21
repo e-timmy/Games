@@ -38,27 +38,38 @@ class Lilypad:
         self.submerge_timer = 0
         self.max_submerge_time = 180  # 3 seconds at 60 FPS
         self.sinking = False
+        self.fully_submerged = False
+        self.has_player = False
 
     def update(self):
         self.x += self.speed
-        if self.sinking:
+        if self.sinking and self.has_player:  # Only continue sinking if player is still on pad
             self.submerge_timer += 1
             if self.submerge_timer >= self.max_submerge_time:
-                self.sinking = False
-                self.submerge_timer = 0
+                self.fully_submerged = True
 
     def start_sinking(self):
         self.sinking = True
-        self.submerge_timer = 0
+        self.has_player = True
+
+    def reset_state(self):
+        if not self.fully_submerged:  # Only reset if not fully submerged
+            self.sinking = False
+            self.has_player = False
+            self.submerge_timer = 0
 
     def is_submerged(self):
-        return self.sinking and self.submerge_timer >= self.max_submerge_time
+        return self.fully_submerged
 
     def draw(self, screen):
-        if not self.is_submerged():
-            scale_factor = 1 - (self.submerge_timer / self.max_submerge_time) * 0.5
+        if not self.fully_submerged:
+            # Only apply scaling if the pad is sinking and has a player
+            if self.sinking and self.has_player:
+                scale_factor = 1 - (self.submerge_timer / self.max_submerge_time) * 0.9
+            else:
+                scale_factor = 1.0
+
             scaled_width = int(self.width * scale_factor)
-            scaled_height = int(self.height * scale_factor)
 
             pygame.draw.circle(screen, self.color,
                                (int(self.x), int(self.y)),
@@ -79,12 +90,14 @@ class River:
         self.lilypads = []
         self.lane_height = height // num_lanes
         self.spawn_timer = 0
-        self.spawn_rate = 60  # Adjusted for better spacing
+        self.spawn_rate = 60
         self.directions = [random.choice([-1, 1]) for _ in range(num_lanes)]
         self.target_logs_per_lane = 2
         self.target_lilypads_per_lane = 3
-        self.min_log_spacing = 200  # Minimum space between logs
-        self.min_lilypad_spacing = 100  # Minimum space between lilypads
+        self.min_log_spacing = 200
+        self.min_lilypad_spacing = 100
+        self.log_lanes = [i for i in range(num_lanes) if i % 2 == 0]  # Even lanes for logs
+        self.lilypad_lanes = [i for i in range(num_lanes) if i % 2 == 1]  # Odd lanes for lilypads
 
     def update(self):
         # Update existing logs
@@ -96,7 +109,7 @@ class River:
         # Update lilypads
         for lilypad in self.lilypads[:]:
             lilypad.update()
-            if lilypad.x < -lilypad.width - 100 or lilypad.x > 900:
+            if lilypad.x < -lilypad.width - 100 or lilypad.x > 900 or lilypad.is_submerged():
                 self.lilypads.remove(lilypad)
 
         # Spawn new objects
@@ -107,20 +120,18 @@ class River:
             self._try_spawn_lilypads()
 
     def _try_spawn_logs(self):
-        for lane in range(self.num_lanes):
+        for lane in self.log_lanes:
             lane_y = self.top + (lane + 0.5) * self.lane_height
             current_lane_logs = [log for log in self.logs if abs(log.y - lane_y) < 5]
 
             if len(current_lane_logs) < self.target_logs_per_lane:
                 direction = self.directions[lane]
                 speed = direction * random.uniform(1, 2)
-                width = random.randint(120, 180)  # Consistent log sizes
-                x = -width - 50 if direction > 0 else 850  # Spawn further off screen
+                width = random.randint(120, 180)
+                x = -width - 50 if direction > 0 else 850
 
-                # Check spacing with existing logs in the same lane
                 can_spawn = True
                 for log in current_lane_logs:
-                    # Calculate the space between logs based on direction
                     if direction > 0:
                         space = log.x - (x + width)
                     else:
@@ -134,19 +145,17 @@ class River:
                     self.logs.append(Log(x, lane_y, width, speed))
 
     def _try_spawn_lilypads(self):
-        for lane in range(self.num_lanes):
+        for lane in self.lilypad_lanes:
             lane_y = self.top + (lane + 0.5) * self.lane_height
             current_lane_lilypads = [pad for pad in self.lilypads if abs(pad.y - lane_y) < 5]
 
             if len(current_lane_lilypads) < self.target_lilypads_per_lane:
                 direction = self.directions[lane]
                 speed = direction * random.uniform(0.5, 1.5)
-                x = -30 - 50 if direction > 0 else 850  # Spawn further off screen
+                x = -30 - 50 if direction > 0 else 850
 
-                # Check spacing with existing lilypads in the same lane
                 can_spawn = True
                 for pad in current_lane_lilypads:
-                    # Calculate the space between lilypads based on direction
                     if direction > 0:
                         space = pad.x - (x + 30)
                     else:
@@ -163,7 +172,7 @@ class River:
         # Draw river background
         pygame.draw.rect(screen, self.color, (0, self.top, 800, self.height))
 
-        # Add water effect (simple lines)
+        # Add water effect
         wave_color = (84, 184, 243)
         wave_spacing = 40
         for y in range(int(self.top), int(self.top + self.height), wave_spacing):
@@ -183,7 +192,6 @@ class River:
             lilypad.draw(screen)
 
     def get_log_at(self, x, y):
-        # Add a small buffer to the collision detection to make it easier to get on logs
         buffer = 5
         for log in self.logs:
             if (log.x - buffer < x < log.x + log.width + buffer and
@@ -192,10 +200,10 @@ class River:
         return None
 
     def get_lilypad_at(self, x, y):
-        # Add a small buffer to the collision detection to make it easier to get on lilypads
         buffer = 5
         for lilypad in self.lilypads:
-            if (lilypad.x - lilypad.width // 2 - buffer < x < lilypad.x + lilypad.width // 2 + buffer and
+            if (not lilypad.is_submerged() and
+                    lilypad.x - lilypad.width // 2 - buffer < x < lilypad.x + lilypad.width // 2 + buffer and
                     lilypad.y - lilypad.height // 2 - buffer < y < lilypad.y + lilypad.height // 2 + buffer):
                 return lilypad
         return None

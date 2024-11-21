@@ -3,7 +3,7 @@ import random
 import math
 from player import Player
 from game_state import GameState
-from level_generator import generate_level
+from level_generator import generate_level, DifficultyConfig
 from vehicle import Vehicle
 from river import River, Log, Lilypad
 
@@ -14,7 +14,12 @@ class Game:
         self.current_level = 1
         self.screen_width = 800
         self.screen_height = 600
-        self.road_height = 200
+
+        # Base size for a single lane
+        self.base_lane_height = 60
+        # Maximum total road height (when many lanes)
+        self.max_road_height = 300
+
         self.river_height = 0
         self.level_start_time = 0
         self.level_message = ""
@@ -29,24 +34,36 @@ class Game:
 
         self.level_config = generate_level(self.current_level)
 
-        # Calculate road and river positions
+        # Calculate road height based on number of lanes with scaling
+        if self.level_config.num_lanes == 1:
+            self.road_height = self.base_lane_height
+        else:
+            # Scale down lane height as number of lanes increases
+            scale_factor = max(0.6, 1 - (self.level_config.num_lanes * 0.05))  # 5% reduction per lane, minimum 60% size
+            adjusted_lane_height = self.base_lane_height * scale_factor
+            self.road_height = min(adjusted_lane_height * self.level_config.num_lanes, self.max_road_height)
+
+        # Calculate river size
         if self.current_level <= 5:
-            self.road_top = (self.screen_height - self.road_height) // 2
             self.river_height = 0
             self.river_lanes = 0
+            total_height = self.road_height
         else:
-            self.river_lanes = min(self.current_level - 5, 3)  # Start with 1 lane, max 3 lanes
-            self.river_height = 60 * self.river_lanes  # Each river lane is 60 pixels high
+            self.river_lanes = min(self.current_level - 5, 3)
+            # Scale river lanes similar to road lanes
+            river_scale_factor = max(0.7, 1 - (self.river_lanes * 0.05))
+            self.river_height = 60 * self.river_lanes * river_scale_factor
             total_height = self.road_height + self.river_height
-            total_top = (self.screen_height - total_height) // 2
-            self.road_top = total_top + self.river_height
 
+        # Center everything vertically
+        vertical_center = self.screen_height // 2
+        self.road_top = vertical_center - (total_height // 2) + (self.river_height if self.current_level > 5 else 0)
         self.road_bottom = self.road_top + self.road_height
         self.river_top = self.road_top - self.river_height
         self.river_bottom = self.road_top
 
-        # Calculate lane positions
-        self.lane_height = self.road_height // self.level_config.num_lanes
+        # Calculate lane positions with equal spacing
+        self.lane_height = self.road_height / self.level_config.num_lanes
         self.lanes = [
             self.road_top + (i * self.lane_height) + (self.lane_height // 2)
             for i in range(self.level_config.num_lanes)
@@ -56,9 +73,9 @@ class Game:
         self.lane_directions = [random.choice([-1, 1]) for _ in range(self.level_config.num_lanes)]
 
         # Calculate target vehicles per lane based on level
-        base_vehicles = 2  # Base number of vehicles per lane
-        level_multiplier = 1 + (self.current_level - 1) * 0.2  # 20% increase per level
-        self.target_vehicles_per_lane = min(base_vehicles * level_multiplier, 4)  # Cap at 4 vehicles per lane
+        base_vehicles = 2
+        level_multiplier = 1 + (self.current_level - 1) * 0.2
+        self.target_vehicles_per_lane = min(base_vehicles * level_multiplier, 4)
         self.target_total_vehicles = int(self.target_vehicles_per_lane * self.level_config.num_lanes)
 
         # Initialize game objects
@@ -168,8 +185,24 @@ class Game:
                 self.vehicles.append(Vehicle(x, self.lanes[lane], speed, vehicle_type))
 
     def update(self):
+        # Always update game state regardless of game over
+        self.draw_game_state()
+
+        # Update all game objects
+        self.spawn_vehicle()
+
+        # Update vehicles
+        for vehicle in self.vehicles[:]:
+            vehicle.update()
+            if vehicle.x < -200 or vehicle.x > 1000:
+                self.vehicles.remove(vehicle)
+
+        # Update river if it exists
+        if self.river:
+            self.river.update()
+
+        # If game is over, draw overlay and handle retry
         if self.game_over:
-            self.draw_game_state()
             overlay = pygame.Surface((800, 600))
             overlay.fill((0, 0, 0))
             overlay.set_alpha(128)
@@ -194,77 +227,74 @@ class Game:
         return self.update_game()
 
     def update_game(self):
-        self.draw_game_state()
+        prev_y = self.player.y
 
-        if not self.game_over:
-            prev_y = self.player.y
+        # Update player if not game over
+        if self.player.is_dead:
+            if self.player.update(self.lanes, self.river_top if self.river else None,
+                                  self.river_bottom if self.river else None):
+                self.game_over = True
+        else:
             self.player.update(self.lanes, self.river_top if self.river else None,
                                self.river_bottom if self.river else None)
-            self.spawn_vehicle()
 
-            if self.river:
-                self.river.update()
-                # Check if player is in river area
-                if self.river_top <= self.player.y <= self.river_bottom:
-                    current_log = self.river.get_log_at(self.player.x, self.player.y)
-                    current_lilypad = self.river.get_lilypad_at(self.player.x, self.player.y)
+        if self.river:
+            # Reset all lilypads that don't have a player
+            for lilypad in self.river.lilypads:
+                if not lilypad.has_player and lilypad.sinking:
+                    lilypad.reset_state()
 
-                    if self.player.is_moving:
-                        # Player is still moving, don't check for death
-                        if current_log:
-                            self.player.on_log = True
-                            self.player.on_lilypad = False
-                        elif current_lilypad and not current_lilypad.is_submerged():
-                            self.player.on_log = False
-                            self.player.on_lilypad = True
-                            if not current_lilypad.sinking:
-                                current_lilypad.start_sinking()
-                    else:
-                        # Player has finished moving
-                        if current_log:
-                            self.player.on_log = True
-                            self.player.on_lilypad = False
-                            self.player.move_on_log(current_log.speed)
-                        elif current_lilypad and not current_lilypad.is_submerged():
-                            self.player.on_log = False
-                            self.player.on_lilypad = True
-                            self.player.move_on_lilypad(current_lilypad.speed)
-                            if not current_lilypad.sinking:
-                                current_lilypad.start_sinking()
-                        elif not self.player.test_mode:
-                            # Player is in water without a log or lilypad after movement
-                            self.game_over = True
+            # Check if player is in river area and not dead
+            if not self.player.is_dead and self.river_top <= self.player.y <= self.river_bottom:
+                current_log = self.river.get_log_at(self.player.x, self.player.y)
+                current_lilypad = self.river.get_lilypad_at(self.player.x, self.player.y)
 
-                # Adjust player's y-position to the center of the river lane
-                if self.river_top <= self.player.y <= self.river_bottom and not self.player.is_moving:
-                    river_lane = int((self.player.y - self.river_top) / self.river.lane_height)
-                    self.player.y = self.river.get_lane_center(river_lane)
-
-                # Check if player is moving from land to river
-                if prev_y < self.river_top <= self.player.y:
-                    # Snap to the first river lane center
-                    self.player.y = self.river.get_lane_center(0)
-                    self.player.on_log = bool(self.river.get_log_at(self.player.x, self.player.y))
-                    self.player.on_lilypad = bool(self.river.get_lilypad_at(self.player.x, self.player.y))
-
-                # Check if player is moving from river to land
-                elif self.river_top <= prev_y < self.river_top:
+                if current_log:
+                    self.player.on_log = True
+                    self.player.on_lilypad = False
+                    self.player.move_on_log(current_log.speed)
+                elif current_lilypad and not current_lilypad.is_submerged():
+                    self.player.on_log = False
+                    self.player.on_lilypad = True
+                    self.player.move_on_lilypad(current_lilypad.speed)
+                    current_lilypad.has_player = True
+                    if not current_lilypad.sinking:
+                        current_lilypad.start_sinking()
+                elif not self.player.test_mode and not self.player.is_moving:
+                    if not self.player.is_dead:
+                        self.player.die('river')
+                else:
                     self.player.on_log = False
                     self.player.on_lilypad = False
 
-            if self.player.y < (self.river_top if self.river else self.road_top):
-                if not self.showing_level_complete:
-                    self.victory_timer += 1
-                    if self.victory_timer >= 30:
-                        self.showing_level_complete = True
-                        self.player.start_celebration()
+                    # Reset has_player for all lilypads
+                    for lilypad in self.river.lilypads:
+                        lilypad.has_player = False
 
-                if self.showing_level_complete:
-                    self.draw_overlay(f"Level {self.current_level} Complete!")
-                    keys = pygame.key.get_pressed()
-                    if keys[pygame.K_SPACE]:
-                        self.current_level += 1
-                        self.reset(show_message=True)
+            # Adjust player's y-position to the center of the river lane
+            if not self.player.is_dead and self.river_top <= self.player.y <= self.river_bottom and not self.player.is_moving:
+                river_lane = int((self.player.y - self.river_top) / self.river.lane_height)
+                self.player.y = self.river.get_lane_center(river_lane)
+
+        # Check for vehicle collisions
+        for vehicle in self.vehicles:
+            if not self.player.is_dead and vehicle.collides_with(self.player) and not self.player.test_mode:
+                self.player.die('road')
+
+        # Victory condition check (only if not dead)
+        if not self.player.is_dead and self.player.y < (self.river_top if self.river else self.road_top):
+            if not self.showing_level_complete:
+                self.victory_timer += 1
+                if self.victory_timer >= 30:
+                    self.showing_level_complete = True
+                    self.player.start_celebration()
+
+            if self.showing_level_complete:
+                self.draw_overlay(f"Level {self.current_level} Complete!")
+                keys = pygame.key.get_pressed()
+                if keys[pygame.K_SPACE]:
+                    self.current_level += 1
+                    self.reset(show_message=True)
 
         return GameState.PLAYING
 
@@ -280,8 +310,16 @@ class Game:
         pygame.draw.rect(self.screen, (80, 80, 80),  # Road color
                          (0, self.road_top, 800, self.road_height))
 
-        # Draw lane markers
-        for y in range(self.road_top, self.road_bottom, self.lane_height):
+        # Draw lane markers (including top and bottom road boundaries)
+        # Top boundary
+        pygame.draw.line(self.screen, (255, 255, 255),
+                         (0, self.road_top), (800, self.road_top), 2)
+        # Bottom boundary
+        pygame.draw.line(self.screen, (255, 255, 255),
+                         (0, self.road_bottom), (800, self.road_bottom), 2)
+        # Lane markers
+        for i in range(1, self.level_config.num_lanes):
+            y = self.road_top + (i * self.lane_height)
             pygame.draw.line(self.screen, (255, 255, 255),
                              (0, y), (800, y), 2)
 
@@ -298,7 +336,10 @@ class Game:
                 self.vehicles.remove(vehicle)
             # Only trigger game over if not in test mode
             elif vehicle.collides_with(self.player) and not self.game_over and not self.player.test_mode:
-                self.game_over = True
+                if not self.player.is_dead:  # Only trigger death if not already dead
+                    self.player.die('road')
+                else:
+                    self.game_over = True
 
         # Draw test mode indicator
         if self.player.test_mode:
