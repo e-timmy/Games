@@ -71,14 +71,12 @@ class Game:
     def update(self):
         if self.state == PLAYING:
             keys = pygame.key.get_pressed()
-            self.player.update(keys, self.space)
+            self.player.update(keys, self.space, self.level.get_ladders())  # Pass ladders
             self.level.update(self.space)
 
-            # Check for level completion
             if self.level.check_finish(self.player):
                 self.state = LEVEL_COMPLETE
 
-            # Check for collisions with balls
             for ball in self.level.balls:
                 if abs(ball.body.position.x - self.player.body.position.x) < 20 and \
                         abs(ball.body.position.y - self.player.body.position.y) < 20:

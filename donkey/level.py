@@ -2,38 +2,35 @@ import pygame
 import pymunk
 import random
 
-from game_objects import Platform, Ball, create_ball
+from game_objects import Platform, Ball, create_ball, Ladder
 
 
 class Level:
     def __init__(self, number):
         self.number = number
         self.platforms = []
+        self.ladders = []
         self.balls = []
         self.ball_spawn_timer = 0
         self.finish_zone = None
         self.completed = False
 
-        # Level scaling factors
         base_platforms = 4
         additional_platforms = (number - 1) * 2
         self.num_platforms = min(base_platforms + additional_platforms, 15)
 
-        # Adjust platform spacing based on number of platforms
-        self.total_height = 500  # Total playable height
+        self.total_height = 500
         self.platform_spacing = self.total_height / (self.num_platforms + 1)
 
-        # Player and game mechanics configuration
         self.player_size = 20
-        # Make jump height 2.5x the platform spacing to ensure reachability
-        self.jump_height = self.platform_spacing * 2.5
+        ball_size = 15  # Define ball size
+        self.jump_height = ball_size * 2.5  # Jump height relative to ball size
 
-        # Ball configurations
         self.ball_config = {
             "interval": max(180 - (number - 1) * 20, 60),
             "speed": 3 + (number - 1),
             "max_balls": 1 if number == 1 else min(2 + number, 8),
-            "size": 10
+            "size": ball_size
         }
 
     def generate_platforms(self, space):
@@ -42,11 +39,10 @@ class Level:
         screen_height = 600
 
         self.platforms = []
+        self.ladders = []
 
         # First platform (ground) positioning
         first_platform_y = screen_height - self.platform_spacing
-
-        # Create first platform (ground)
         ground = Platform(space, (0, first_platform_y), (screen_width, first_platform_y), thickness)
         self.platforms.append(ground)
 
@@ -55,62 +51,97 @@ class Level:
         right_wall = Platform(space, (screen_width + 20, 100), (screen_width + 20, screen_height), thickness)
         self.platforms.extend([left_wall, right_wall])
 
-        # Generate platforms with smaller slope for better reachability
         last_y = first_platform_y
 
         for i in range(self.num_platforms):
             y = last_y - self.platform_spacing
 
             if i % 2 == 0:
-                # Platform sloping down from left to right (reduced slope)
                 start_x = -20
-                end_x = random.randint(500, 700)
+                end_x = random.randint(600, 750)
                 start_y = y
-                end_y = y + 10  # Reduced slope
+                end_y = y + 30
+
+                # Add ladder connecting this platform to the one below
+                ladder_x = random.randint(end_x - 200, end_x - 50)
+                if i == 0:
+                    # For the first platform, connect to ground platform
+                    self.ladders.append(Ladder(ladder_x, end_y, first_platform_y))
+                else:
+                    # For others, connect to the platform below
+                    self.ladders.append(Ladder(ladder_x, end_y, last_y))
             else:
-                # Platform sloping down from right to left (reduced slope)
                 start_x = screen_width + 20
-                end_x = random.randint(100, 300)
+                end_x = random.randint(50, 200)
                 start_y = y
-                end_y = y + 10  # Reduced slope
+                end_y = y + 30
+
+                # Add ladder connecting this platform to the one below
+                ladder_x = random.randint(end_x + 50, end_x + 200)
+                self.ladders.append(Ladder(ladder_x, end_y, last_y))
 
             platform = Platform(space, (start_x, start_y), (end_x, end_y), thickness)
             self.platforms.append(platform)
+
             last_y = y
 
-        # Create finish zone above the highest platform
-        highest_y = min([p.p1[1] for p in self.platforms[3:]], default=100)
-        if self.platforms[-1].p1[0] < 400:
-            self.finish_zone = pygame.Rect(750, highest_y - 50, 70, 30)
+        # Finish zone placement
+        highest_platform = self.platforms[-1]
+        if highest_platform.p1[0] < 400:
+            finish_x = highest_platform.p2[0] - 90
+            finish_y = highest_platform.p2[1] - 30
         else:
-            self.finish_zone = pygame.Rect(0, highest_y - 50, 70, 30)
+            finish_x = highest_platform.p2[0]
+            finish_y = highest_platform.p2[1] - 30
+
+        self.finish_zone = pygame.Rect(finish_x, finish_y, 70, 30)
 
     def update(self, space):
         self.ball_spawn_timer += 1
         if self.ball_spawn_timer >= self.ball_config["interval"] and len(self.balls) < self.ball_config["max_balls"]:
-            highest_y = min([p.p1[1] for p in self.platforms[3:]], default=100)
+            highest_platform = None
+            highest_y = float('inf')
+            for platform in self.platforms[3:]:
+                platform_y = min(platform.p1[1], platform.p2[1])
+                if platform_y < highest_y:
+                    highest_y = platform_y
+                    highest_platform = platform
 
-            if self.finish_zone.x > 400:
-                spawn_pos = (850, highest_y + 20)
-                velocity = (-self.ball_config["speed"] * 200, 0)
+            if highest_platform:
+                if highest_platform.p1[0] < highest_platform.p2[0]:
+                    spawn_pos = (-50, highest_y - 15)
+                    velocity = (self.ball_config["speed"] * 100, 0)
+                else:
+                    spawn_pos = (850, highest_y - 15)
+                    velocity = (-self.ball_config["speed"] * 100, 0)
+
+                can_spawn = True
+                for ball in self.balls:
+                    if abs(ball.body.position.x - spawn_pos[0]) < 100:
+                        can_spawn = False
+                        break
+
+                if can_spawn:
+                    new_ball = create_ball(space, self.ball_config["size"])
+                    new_ball.body.position = spawn_pos
+                    new_ball.body.velocity = velocity
+                    self.balls.append(new_ball)
+                    self.ball_spawn_timer = 0
+
+        kept_balls = []
+        for ball in self.balls:
+            if -100 < ball.body.position.x < 900 and ball.body.position.y < 650:
+                kept_balls.append(ball)
             else:
-                spawn_pos = (-50, highest_y + 20)
-                velocity = (self.ball_config["speed"] * 200, 0)
-
-            new_ball = create_ball(space, self.ball_config["size"])
-            new_ball.body.position = spawn_pos
-            new_ball.body.velocity = velocity
-
-            self.balls.append(new_ball)
-            self.ball_spawn_timer = 0
-
-        self.balls = [ball for ball in self.balls if
-                      -100 < ball.body.position.x < 900 and
-                      ball.body.position.y < 650]
+                space.remove(ball.body, ball.shape)
+        self.balls = kept_balls
 
     def draw(self, screen):
         for platform in self.platforms:
             platform.draw(screen)
+
+        for ladder in self.ladders:
+            ladder.draw(screen)
 
         for ball in self.balls:
             ball.draw(screen)
@@ -119,6 +150,9 @@ class Level:
 
     def get_jump_height(self):
         return self.jump_height
+
+    def get_ladders(self):
+        return self.ladders
 
     def check_finish(self, player):
         player_rect = pygame.Rect(

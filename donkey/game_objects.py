@@ -7,10 +7,8 @@ class Platform:
     def __init__(self, space, p1, p2, thickness=20):
         self.p1 = p1
         self.p2 = p2
-        # Convert thickness to integer for pygame drawing
         self.thickness = int(thickness)
 
-        # Use original (float) thickness for physics
         physics_thickness = thickness / 2
 
         self.body = pymunk.Body(body_type=pymunk.Body.STATIC)
@@ -22,36 +20,50 @@ class Platform:
         space.add(self.body, self.shape)
 
     def draw(self, screen):
-        # Convert coordinates to integers for pygame drawing
         start_pos = (int(self.p1[0]), int(self.p1[1]))
         end_pos = (int(self.p2[0]), int(self.p2[1]))
 
-        # Draw main platform line
         pygame.draw.line(screen, (0, 200, 0), start_pos, end_pos, self.thickness)
-        # Draw highlight
         pygame.draw.line(screen, (0, 255, 0), start_pos, end_pos, 2)
 
-    def draw(self, screen):
-        # Convert positions to integers for drawing
-        start_pos = (int(self.p1[0]), int(self.p1[1]))
-        end_pos = (int(self.p2[0]), int(self.p2[1]))
 
-        # Draw main platform line with integer thickness
-        pygame.draw.line(screen, (0, 200, 0), start_pos, end_pos, self.thickness)
+class Ladder:
+    def __init__(self, x, y1, y2):
+        self.x = x
+        self.y1 = min(y1, y2)  # Ensure y1 is the top of the ladder
+        self.y2 = max(y1, y2)  # Ensure y2 is the bottom of the ladder
+        self.width = 30
+
+    def draw(self, screen):
+        # Draw vertical lines
+        pygame.draw.line(screen, (139, 69, 19), (self.x, self.y1), (self.x, self.y2), 3)
+        pygame.draw.line(screen, (139, 69, 19), (self.x + self.width, self.y1), (self.x + self.width, self.y2), 3)
+
+        # Draw rungs
+        rung_spacing = 20
+        for y in range(int(self.y1), int(self.y2), rung_spacing):
+            pygame.draw.line(screen, (139, 69, 19), (self.x, y), (self.x + self.width, y), 2)
+
+    def contains_point(self, x, y):
+        return (self.x <= x <= self.x + self.width and
+                self.y1 <= y <= self.y2)
 
 
 class Ball:
-    def __init__(self, space, position, size=10):  # Add size parameter
+    def __init__(self, space, position, size=15):  # Increased default size
         self.radius = size
-        mass = 1
-        moment = pymunk.moment_for_circle(mass, 0, self.radius)
-        self.body = pymunk.Body(mass, moment)
+        self.mass = 8.0
+        moment = pymunk.moment_for_circle(self.mass, 0, self.radius)
+        self.body = pymunk.Body(self.mass, moment)
         self.body.position = position
 
         self.shape = pymunk.Circle(self.body, self.radius)
-        self.shape.elasticity = 0.95
-        self.shape.friction = 0.9
+        self.shape.elasticity = 0.3
+        self.shape.friction = 0.7
         self.shape.collision_type = 2
+
+        gravity_force = 1.2
+        self.body.apply_force_at_local_point((0, self.mass * 900 * gravity_force), (0, 0))
 
         space.add(self.body, self.shape)
 
@@ -61,34 +73,5 @@ class Ball:
         pygame.draw.circle(screen, (255, 165, 0), pos, int(self.radius - 2))
 
 
-def create_ball(space, size=10):
+def create_ball(space, size=15):  # Updated default size
     return Ball(space, (850, 30), size)
-
-
-def create_platforms(space):
-    platforms = []
-    thickness = 16  # Slightly thinner platforms for better aesthetics
-
-    platform_positions = [
-        ((0, 580), (800, 580)),  # Floor
-        ((-20, 490), (700, 520)),  # First slope (left to right)
-        ((820, 400), (100, 430)),  # Second slope (right to left)
-        ((-20, 310), (700, 340)),  # Third slope (left to right)
-        ((820, 220), (100, 250)),  # Fourth slope (right to left)
-        ((-20, 130), (700, 160)),  # Fifth slope (left to right)
-        ((900, 40), (100, 70))  # Top slope (right to left, extends off-screen)
-    ]
-
-    for p1, p2 in platform_positions:
-        platforms.append(Platform(space, p1, p2, thickness))
-
-    # Create walls with proper thickness
-    walls = [
-        ((-20, 0), (-20, 600)),  # Left wall (moved slightly off-screen)
-        ((820, 100), (820, 600))  # Right wall (moved slightly off-screen)
-    ]
-
-    for p1, p2 in walls:
-        platforms.append(Platform(space, p1, p2, thickness))
-
-    return platforms
