@@ -15,7 +15,7 @@ class Platform:
         self.shape = pymunk.Segment(self.body, p1, p2, physics_thickness)
         self.shape.friction = 0.7
         self.shape.elasticity = 0.2
-        self.shape.collision_type = 1  # Platform collision type
+        self.shape.collision_type = 1
 
         space.add(self.body, self.shape)
 
@@ -23,26 +23,40 @@ class Platform:
         start_pos = (int(self.p1[0]), int(self.p1[1]))
         end_pos = (int(self.p2[0]), int(self.p2[1]))
 
-        pygame.draw.line(screen, (0, 200, 0), start_pos, end_pos, self.thickness)
-        pygame.draw.line(screen, (0, 255, 0), start_pos, end_pos, 2)
+        # Calculate the angle of the platform
+        angle = math.atan2(end_pos[1] - start_pos[1], end_pos[0] - start_pos[0])
+
+        # Draw main platform
+        pygame.draw.line(screen, (100, 100, 100), start_pos, end_pos, self.thickness)
+
+        # Draw top edge highlight
+        highlight_offset = int(math.sin(angle) * (self.thickness // 2))
+        shadow_offset = int(math.sin(angle) * (self.thickness // 2))
+
+        highlight_start = (start_pos[0], start_pos[1] - highlight_offset)
+        highlight_end = (end_pos[0], end_pos[1] - highlight_offset)
+        pygame.draw.line(screen, (160, 160, 160), highlight_start, highlight_end, 2)
+
+        # Draw bottom edge shadow
+        shadow_start = (start_pos[0], start_pos[1] + shadow_offset)
+        shadow_end = (end_pos[0], end_pos[1] + shadow_offset)
+        pygame.draw.line(screen, (60, 60, 60), shadow_start, shadow_end, 2)
 
 
 class Ladder:
     def __init__(self, x, y1, y2):
         self.x = x
-        self.y1 = min(y1, y2)  # Ensure y1 is the top of the ladder
-        self.y2 = max(y1, y2)  # Ensure y2 is the bottom of the ladder
+        self.y1 = min(y1, y2)
+        self.y2 = max(y1, y2)
         self.width = 30
 
     def draw(self, screen):
-        # Draw vertical lines
         pygame.draw.line(screen, (139, 69, 19), (self.x, self.y1), (self.x, self.y2), 3)
         pygame.draw.line(screen, (139, 69, 19), (self.x + self.width, self.y1), (self.x + self.width, self.y2), 3)
 
-        # Draw rungs
         rung_spacing = 20
         for y in range(int(self.y1), int(self.y2), rung_spacing):
-            pygame.draw.line(screen, (139, 69, 19), (self.x, y), (self.x + self.width, y), 2)
+            pygame.draw.line(screen, (165, 82, 22), (self.x, y), (self.x + self.width, y), 2)
 
     def contains_point(self, x, y):
         return (self.x <= x <= self.x + self.width and
@@ -50,7 +64,7 @@ class Ladder:
 
 
 class Ball:
-    def __init__(self, space, position, size=15):  # Increased default size
+    def __init__(self, space, position, size=15):
         self.radius = size
         self.mass = 8.0
         moment = pymunk.moment_for_circle(self.mass, 0, self.radius)
@@ -69,9 +83,9 @@ class Ball:
 
     def draw(self, screen):
         pos = int(self.body.position.x), int(self.body.position.y)
-        pygame.draw.circle(screen, (200, 140, 0), pos, int(self.radius))
-        pygame.draw.circle(screen, (255, 165, 0), pos, int(self.radius - 2))
+        pygame.draw.circle(screen, (200, 0, 0), pos, int(self.radius))
+        pygame.draw.circle(screen, (255, 0, 0), pos, int(self.radius - 2))
 
 
-def create_ball(space, size=15):  # Updated default size
+def create_ball(space, size=15):
     return Ball(space, (850, 30), size)

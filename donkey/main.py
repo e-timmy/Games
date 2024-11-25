@@ -4,21 +4,11 @@ import sys
 from player import Player, collision_handler
 from level import Level
 from menu import Menu
+from settings import *
 
-# Initialize Pygame and Pymunk
 pygame.init()
 pygame.font.init()
 
-# Constants
-WINDOW_WIDTH = 800
-WINDOW_HEIGHT = 600
-FPS = 60
-
-# Game states
-MAIN_MENU = 0
-PLAYING = 1
-LEVEL_COMPLETE = 2
-GAME_OVER = 3
 
 
 class Game:
@@ -38,9 +28,7 @@ class Game:
         self.level = Level(self.current_level)
         self.level.generate_platforms(self.space)
 
-        # Start player just above the ground platform
         start_y = 600 - self.level.platform_spacing - 30
-
         self.player = Player(self.space, (WINDOW_WIDTH // 2, start_y),
                              self.level.player_size, self.level.get_jump_height())
 
@@ -63,6 +51,7 @@ class Game:
                         self.state = PLAYING
                     elif self.state == GAME_OVER:
                         self.current_level = 1
+                        self.reset_game()
                         self.state = MAIN_MENU
                     elif self.state == PLAYING:
                         self.player.jump()
@@ -71,7 +60,7 @@ class Game:
     def update(self):
         if self.state == PLAYING:
             keys = pygame.key.get_pressed()
-            self.player.update(keys, self.space, self.level.get_ladders())  # Pass ladders
+            self.player.update(keys, self.space, self.level.get_ladders())
             self.level.update(self.space)
 
             if self.level.check_finish(self.player):
@@ -85,7 +74,7 @@ class Game:
             self.space.step(1 / FPS)
 
     def draw(self):
-        self.screen.fill((0, 0, 0))
+        self.screen.fill((30, 30, 50))  # Dark blue background
 
         if self.state == MAIN_MENU:
             self.menu.draw_main_menu(self.screen)
@@ -110,7 +99,6 @@ class Game:
             self.update()
             self.draw()
             self.clock.tick(FPS)
-
 
 if __name__ == "__main__":
     game = Game()

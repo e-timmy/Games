@@ -3,6 +3,7 @@ import pymunk
 import random
 
 from game_objects import Platform, Ball, create_ball, Ladder
+from settings import WINDOW_WIDTH
 
 
 class Level:
@@ -23,8 +24,8 @@ class Level:
         self.platform_spacing = self.total_height / (self.num_platforms + 1)
 
         self.player_size = 20
-        ball_size = 15  # Define ball size
-        self.jump_height = ball_size * 2.5  # Jump height relative to ball size
+        ball_size = 15
+        self.jump_height = ball_size * 2.5
 
         self.ball_config = {
             "interval": max(180 - (number - 1) * 20, 60),
@@ -34,19 +35,17 @@ class Level:
         }
 
     def generate_platforms(self, space):
-        thickness = 16
+        thickness = 20
         screen_width = 800
         screen_height = 600
 
         self.platforms = []
         self.ladders = []
 
-        # First platform (ground) positioning
         first_platform_y = screen_height - self.platform_spacing
         ground = Platform(space, (0, first_platform_y), (screen_width, first_platform_y), thickness)
         self.platforms.append(ground)
 
-        # Create walls
         left_wall = Platform(space, (-20, 0), (-20, screen_height), thickness)
         right_wall = Platform(space, (screen_width + 20, 100), (screen_width + 20, screen_height), thickness)
         self.platforms.extend([left_wall, right_wall])
@@ -56,42 +55,61 @@ class Level:
         for i in range(self.num_platforms):
             y = last_y - self.platform_spacing
 
-            if i % 2 == 0:
-                start_x = -20
-                end_x = random.randint(600, 750)
-                start_y = y
-                end_y = y + 30
+            platform_height = 40  # Height difference for slopes
+            platform_min_length = 300  # Minimum platform length
 
-                # Add ladder connecting this platform to the one below
-                ladder_x = random.randint(end_x - 200, end_x - 50)
+            platform_height = 25  # Reduced height difference for gentler slopes
+
+            if i % 2 == 0:  # Even platforms slope down from left to right
+                start_x = 0  # Start at left edge
+                end_x = screen_width - 100  # Extend almost to right edge
+                start_y = y - platform_height  # Start higher
+                end_y = y + platform_height  # End lower
+
+                # Always add at least one ladder
+                ladder_x = random.randint(end_x - 200, end_x - 100)
                 if i == 0:
-                    # For the first platform, connect to ground platform
-                    self.ladders.append(Ladder(ladder_x, end_y, first_platform_y))
+                    # Connect ground to first platform, extend ladder 20px above platform
+                    self.ladders.append(Ladder(ladder_x, end_y - 20, first_platform_y))
                 else:
-                    # For others, connect to the platform below
-                    self.ladders.append(Ladder(ladder_x, end_y, last_y))
-            else:
-                start_x = screen_width + 20
-                end_x = random.randint(50, 200)
-                start_y = y
-                end_y = y + 30
+                    # Connect to previous platform, extend ladder 20px above platform
+                    self.ladders.append(Ladder(ladder_x, end_y - 20, last_y))
 
-                # Add ladder connecting this platform to the one below
-                ladder_x = random.randint(end_x + 50, end_x + 200)
-                self.ladders.append(Ladder(ladder_x, end_y, last_y))
+                # 30% chance for an additional ladder
+                if random.random() < 0.3:
+                    extra_ladder_x = random.randint(end_x - 400, end_x - 250)
+                    if i == 0:
+                        self.ladders.append(Ladder(extra_ladder_x, end_y - 20, first_platform_y))
+                    else:
+                        self.ladders.append(Ladder(extra_ladder_x, end_y - 20, last_y))
+
+            else:  # Odd platforms slope up from left to right
+                start_x = 100  # Start slightly in from left
+                end_x = screen_width  # End at right edge
+                start_y = y + platform_height  # Start lower
+                end_y = y - platform_height  # End higher
+
+                # Always add at least one ladder
+                ladder_x = random.randint(start_x + 100, start_x + 200)
+                self.ladders.append(Ladder(ladder_x, start_y - 20, last_y))
+
+                # 30% chance for an additional ladder
+                if random.random() < 0.3:
+                    extra_ladder_x = random.randint(start_x + 250, start_x + 400)
+                    self.ladders.append(Ladder(extra_ladder_x, start_y - 20, last_y))
 
             platform = Platform(space, (start_x, start_y), (end_x, end_y), thickness)
             self.platforms.append(platform)
 
             last_y = y
 
-        # Finish zone placement
+        # Place finish zone at top right of highest platform
         highest_platform = self.platforms[-1]
-        if highest_platform.p1[0] < 400:
-            finish_x = highest_platform.p2[0] - 90
+        if len(self.platforms) % 2 == 0:  # Even number of platforms
+            finish_x = highest_platform.p2[0] - 70  # Place near right end
             finish_y = highest_platform.p2[1] - 30
-        else:
-            finish_x = highest_platform.p2[0]
+        else:  # Odd number of platforms
+            finish_x = screen_width - 70  # Place at right edge
             finish_y = highest_platform.p2[1] - 30
 
         self.finish_zone = pygame.Rect(finish_x, finish_y, 70, 30)
@@ -108,12 +126,14 @@ class Level:
                     highest_platform = platform
 
             if highest_platform:
-                if highest_platform.p1[0] < highest_platform.p2[0]:
-                    spawn_pos = (-50, highest_y - 15)
-                    velocity = (self.ball_config["speed"] * 100, 0)
-                else:
-                    spawn_pos = (850, highest_y - 15)
-                    velocity = (-self.ball_config["speed"] * 100, 0)
+                # For alternating platforms, always spawn from the higher end
+                platform_index = len(self.platforms) - self.platforms.index(highest_platform)
+                if platform_index % 2 == 0:  # Even platforms (slope down left to right)
+                    spawn_pos = (0, highest_platform.p1[1])  # Spawn at left edge (higher point)
+                    velocity = (self.ball_config["speed"] * 100, 0)  # Roll right
+                else:  # Odd platforms (slope down right to left)
+                    spawn_pos = (WINDOW_WIDTH, highest_platform.p2[1])  # Spawn at right edge (higher point)
+                    velocity = (-self.ball_config["speed"] * 100, 0)  # Roll left
 
                 can_spawn = True
                 for ball in self.balls:
