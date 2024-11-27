@@ -4,7 +4,6 @@ class GameState:
         self.current_level = 1
         self.max_levels = 3
         self.level_complete = False
-        
 
     def set_game_over(self):
         self.game_over = True

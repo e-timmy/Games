@@ -3,7 +3,8 @@ import pymunk
 import pymunk.pygame_util
 import sys
 import math
-from game_objects import Player, Platform, Rope
+from game_objects import Platform, Rope
+from player import Player
 from game_state import GameState
 from constants import SCREEN_WIDTH, SCREEN_HEIGHT, FPS
 
@@ -28,81 +29,67 @@ platforms = [
 for platform in platforms:
     space.add(platform.body, platform.shape)
 
+# Create a single rope in the center of the screen
+rope = Rope(space, (SCREEN_WIDTH // 2, 0), SCREEN_HEIGHT - 50)
+
+
 def handle_events():
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             return False
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1 and player.rope is None:  # Left click
-                mouse_pos = pygame.mouse.get_pos()
-                angle = math.atan2(mouse_pos[1] - player.body.position.y, mouse_pos[0] - player.body.position.x)
-                player.shoot_rope(angle, space)
+            if event.button == 1:  # Left click
+                player.grab_rope(rope)
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:  # Left click release
-                player.holding_rope = False
-                if player.rope and player.rope.player_joint:
-                    space.remove(player.rope.player_joint)
-                    player.rope.player_joint = None
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
-                player.jump()
+                player.release_rope(rope)
 
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_LEFT]:
+    if keys[pygame.K_a]:
         player.move_left()
-    elif keys[pygame.K_RIGHT]:
+    elif keys[pygame.K_d]:
         player.move_right()
     else:
         player.stop_horizontal_movement()
 
-    # Update holding_rope based on mouse state
-    if pygame.mouse.get_pressed()[0]:  # Left mouse button
-        if player.rope and player.rope.attached_to_ceiling:
-            player.holding_rope = True
-            if not player.rope.player_joint:
-                player.rope.create_player_joint()
-    else:
-        player.holding_rope = False
-        if player.rope and player.rope.player_joint:
-            space.remove(player.rope.player_joint)
-            player.rope.player_joint = None
+    if keys[pygame.K_w]:
+        if not player.holding_rope:
+            player.jump()
 
     return True
 
+
 def update():
     dt = 1.0 / FPS
-    space.step(dt)
+    for _ in range(4):
+        space.step(dt / 4)
     player.update(dt)
-    if player.body.position.y > SCREEN_HEIGHT and not game_state.level_complete:
+    if player.body.position.y > SCREEN_HEIGHT:
         game_state.set_game_over()
-    elif player.body.position.x > SCREEN_WIDTH and not game_state.level_complete:
-        game_state.set_level_complete()
+
 
 def draw():
     screen.fill((255, 255, 255))
 
+    draw_options = pymunk.pygame_util.DrawOptions(screen)
+    draw_options.flags = pymunk.SpaceDebugDrawOptions.DRAW_SHAPES
+
     # Draw ceiling
     pygame.draw.rect(screen, (100, 100, 100), (0, 0, SCREEN_WIDTH, 10))
 
-    # Only draw if level is not complete
-    if not game_state.level_complete:
-        space.debug_draw(draw_options)
-        if player.rope:
-            player.rope.draw(screen)
+    space.debug_draw(draw_options)
+    rope.draw(screen)
 
     # Draw level info
     font = pygame.font.Font(None, 36)
     level_text = font.render(f"Level: {game_state.current_level}", True, (0, 0, 0))
     screen.blit(level_text, (10, 10))
 
-    if game_state.level_complete:
-        level_complete_text = font.render("Level Complete! Press SPACE to continue", True, (0, 255, 0))
-        screen.blit(level_complete_text, (SCREEN_WIDTH // 2 - level_complete_text.get_width() // 2, SCREEN_HEIGHT // 2))
-
     pygame.display.flip()
 
+
 def reset_level():
-    global player, platforms, space
+    global player, platforms, space, rope
 
     # Clean up all physics objects
     clean_level()
@@ -120,6 +107,10 @@ def reset_level():
     for platform in platforms:
         space.add(platform.body, platform.shape)
 
+    # Create new rope
+    rope = Rope(space, (SCREEN_WIDTH // 2, 0), SCREEN_HEIGHT - 50)
+
+
 def clean_level():
     # Remove all physics objects from the space
     for body in space.bodies:
@@ -129,9 +120,11 @@ def clean_level():
     for constraint in space.constraints:
         space.remove(constraint)
 
+
 def reset_game():
     game_state.reset()
     reset_level()
+
 
 def game_loop():
     running = True
@@ -144,6 +137,7 @@ def game_loop():
             update()
             draw()
         clock.tick(FPS)
+
 
 def show_menu():
     menu_font = pygame.font.Font(None, 36)
@@ -163,6 +157,7 @@ def show_menu():
         screen.blit(start_text, (SCREEN_WIDTH // 2 - start_text.get_width() // 2, SCREEN_HEIGHT // 2))
         pygame.display.flip()
         clock.tick(FPS)
+
 
 def show_game_over_screen():
     overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -186,6 +181,7 @@ def show_game_over_screen():
                 sys.exit()
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                 waiting = False
+
 
 if __name__ == "__main__":
     reset_game()
