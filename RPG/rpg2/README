@@ -1,0 +1,37 @@
+# RPG MiniGame
+
+Program runs a simple rpg game. Try it out!
+
+## Description
+
+This program runs a simple rpg game, where the player must make there way through zones, gathering an important
+item from each person after saving them from a boss in the zone. Each item is crucial for beating the next zone's boss.
+As a result, it is crucial for the player's development.
+
+Some special features are npc algorithms and the procedural generation of biomes.
+
+Note, this program is still in development!
+
+## Getting Started
+
+### Dependencies
+
+Should run on most systems with any Python 3 version.
+
+### Installing
+
+To download, simple fork this repo.
+
+### Executing program
+
+I typically run this within an IDE. Otherwise, simply run in a terminal: python main.py
+
+## License
+
+This project is licensed under the MIT_LICENSE License.
+
+# Knowledge base
+
+4a81c18b-31a3-4460-963c-d135e039f671
+
+I want to update the forest generation algorithm in this game. First, give a high level description of how the algorithm works. Then incrementally work into more detail, paying special attention to the pathfiding aspect of it. Given the details, provide a recommendation on how the pathfinder can be altered so that it generates a maze within the border forests, with one correct path in and out. This should take into consideration the qualities of the forests, and if necessary, suggest where changes might be necessary in order for the maze to be properly and effectively constructed.
