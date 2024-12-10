@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <!-- Shadow gradient -->
+        <radialGradient id="shadowGrad">
+            <stop offset="40%" stop-color="black" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="black" stop-opacity="0"/>
+        </radialGradient>
+    </defs>
+
+    <!-- Car shadow -->
+    <ellipse cx="200" cy="150" rx="85" ry="85" fill="url(#shadowGrad)">
+        <animate attributeName="rx"
+                values="85;83;85"
+                dur="0.5s"
+                repeatCount="indefinite"/>
+        <animate attributeName="ry"
+                values="85;83;85"
+                dur="0.5s"
+                repeatCount="indefinite"/>
+    </ellipse>
+
+    <!-- Main car group -->
+    <g transform="translate(200,150)">
+        <animateTransform attributeName="transform"
+                          type="translate"
+                          values="200,150;200,153;200,150"
+                          dur="0.5s"
+                          repeatCount="indefinite"/>
+
+        <!-- Car body -->
+        <path d="M-60,-40
+                 C-70,-40 -80,-30 -80,-20
+                 L-80,20
+                 C-80,30 -70,40 -60,40
+                 L60,40
+                 C70,40 80,30 80,20
+                 L80,-20
+                 C80,-30 70,-40 60,-40 Z"
+              fill="#3498db" stroke="#2980b9" stroke-width="2"/>
+
+        <!-- Windows -->
+        <path d="M-40,-30 L40,-30 L30,-10 L-30,-10 Z"
+              fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1"/>
+        <path d="M-30,10 L30,10 L40,30 L-40,30 Z"
+              fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1"/>
+
+        <!-- Headlights -->
+        <circle cx="70" cy="-15" r="8" fill="yellow">
+            <animate attributeName="opacity"
+                     values="1;0.7;1"
+                     dur="1s"
+                     repeatCount="indefinite"/>
+        </circle>
+        <circle cx="70" cy="15" r="8" fill="yellow">
+            <animate attributeName="opacity"
+                     values="1;0.7;1"
+                     dur="1s"
+                     repeatCount="indefinite"/>
+        </circle>
+
+        <!-- Taillights -->
+        <circle cx="-70" cy="-15" r="6" fill="red">
+            <animate attributeName="opacity"
+                     values="1;0.5;1"
+                     dur="1s"
+                     repeatCount="indefinite"/>
+        </circle>
+        <circle cx="-70" cy="15" r="6" fill="red">
+            <animate attributeName="opacity"
+                     values="1;0.5;1"
+                     dur="1s"
+                     repeatCount="indefinite"/>
+        </circle>
+    </g>
+
+    <!-- Exhaust particles -->
+    <g transform="translate(120,150)">
+        <circle cx="0" cy="0" r="3" fill="#7f8c8d" opacity="0.6">
+            <animate attributeName="cx"
+                     values="0;-20"
+                     dur="1s"
+                     repeatCount="indefinite"/>
+            <animate attributeName="opacity"
+                     values="0.6;0"
+                     dur="1s"
+                     repeatCount="indefinite"/>
+        </circle>
+        <circle cx="-5" cy="2" r="2" fill="#7f8c8d" opacity="0.6">
+            <animate attributeName="cx"
+                     values="0;-15"
+                     dur="0.8s"
+                     repeatCount="indefinite"/>
+            <animate attributeName="opacity"
+                     values="0.6;0"
+                     dur="0.8s"
+                     repeatCount="indefinite"/>
+        </circle>
+        <circle cx="-10" cy="-2" r="2.5" fill="#7f8c8d" opacity="0.6">
+            <animate attributeName="cx"
+                     values="0;-25"
+                     dur="1.2s"
+                     repeatCount="indefinite"/>
+            <animate attributeName="opacity"
+                     values="0.6;0"
+                     dur="1.2s"
+                     repeatCount="indefinite"/>
+        </circle>
+    </g>
+</svg>

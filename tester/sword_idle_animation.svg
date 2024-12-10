@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <!-- Sword Handle -->
+    <rect x="45" y="60" width="10" height="20" fill="#8B4513"/>
+    <!-- Guard -->
+    <rect x="35" y="55" width="30" height="5" fill="#DAA520"/>
+    <!-- Blade -->
+    <path d="M47 15 L53 15 L55 55 L45 55 Z" fill="#C0C0C0"/>
+    <!-- Decoration -->
+    <circle cx="50" cy="70" r="3" fill="#DAA520"/>
+    <!-- Center line on blade -->
+    <line x1="50" y1="15" x2="50" y2="55" stroke="#A0A0A0" stroke-width="1"/>
+</svg>

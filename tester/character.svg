@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <!-- Frame 1 (Standing) -->
+  <g id="frame1">
+    <!-- Hair (behind) -->
+    <path d="M5 2 L11 2 L11 5 L5 5 Z" fill="#8b4513"/>
+
+    <!-- Head -->
+    <circle cx="8" cy="5" r="3" fill="#f0d0b0"/>
+
+    <!-- Hair (front) -->
+    <path d="M5 2 Q8 3 11 2" fill="#8b4513"/>
+
+    <!-- Eyes -->
+    <circle cx="7" cy="4.5" r="0.5" fill="#000"/>
+    <circle cx="9" cy="4.5" r="0.5" fill="#000"/>
+
+    <!-- Mouth -->
+    <path d="M7.5 6 Q8 6.5 8.5 6" stroke="#000" fill="none" stroke-width="0.3"/>
+
+    <!-- Body -->
+    <rect x="5" y="7" width="6" height="5" fill="#4a4a4a"/>
+
+    <!-- Arms -->
+    <rect x="4" y="8" width="2" height="3" fill="#f0d0b0"/>
+    <rect x="10" y="8" width="2" height="3" fill="#f0d0b0"/>
+
+    <!-- Legs -->
+    <rect x="6" y="12" width="2" height="3" fill="#4a4a4a"/>
+    <rect x="8" y="12" width="2" height="3" fill="#4a4a4a"/>
+  </g>
+
+  <!-- Frame 2 (Walking) -->
+  <g id="frame2" visibility="hidden">
+    <!-- Hair (behind) -->
+    <path d="M5 2 L11 2 L11 5 L5 5 Z" fill="#8b4513"/>
+
+    <!-- Head -->
+    <circle cx="8" cy="5" r="3" fill="#f0d0b0"/>
+
+    <!-- Hair (front) -->
+    <path d="M5 2 Q8 3 11 2" fill="#8b4513"/>
+
+    <!-- Eyes -->
+    <circle cx="7" cy="4.5" r="0.5" fill="#000"/>
+    <circle cx="9" cy="4.5" r="0.5" fill="#000"/>
+
+    <!-- Mouth -->
+    <path d="M7.5 6 Q8 6.5 8.5 6" stroke="#000" fill="none" stroke-width="0.3"/>
+
+    <!-- Body -->
+    <rect x="5" y="7" width="6" height="5" fill="#4a4a4a"/>
+
+    <!-- Arms (alternate position) -->
+    <rect x="4" y="7" width="2" height="3" fill="#f0d0b0"/>
+    <rect x="10" y="9" width="2" height="3" fill="#f0d0b0"/>
+
+    <!-- Legs (alternate position) -->
+    <rect x="6" y="11" width="2" height="3" fill="#4a4a4a"/>
+    <rect x="8" y="13" width="2" height="3" fill="#4a4a4a"/>
+  </g>
+
+  <style>
+    @keyframes walk {
+      0%, 100% { visibility: visible; }
+      50% { visibility: hidden; }
+    }
+    #frame1 { animation: walk 0.5s infinite; }
+    #frame2 { animation: walk 0.5s infinite reverse; }
+  </style>
+</svg>

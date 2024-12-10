@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <!-- Energy aura -->
+    <circle cx="50" cy="50" r="45" fill="none" stroke="#4A90E2" stroke-width="2" opacity="0.3">
+        <animate attributeName="r" values="35;45;35" dur="1s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.3;0.6;0.3" dur="1s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="50" cy="50" r="40" fill="none" stroke="#4A90E2" stroke-width="3" opacity="0.5">
+        <animate attributeName="r" values="30;40;30" dur="1s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.5;0.8;0.5" dur="1s" repeatCount="indefinite"/>
+    </circle>
+    <!-- Base sword -->
+    <!-- Sword Handle -->
+    <rect x="45" y="60" width="10" height="20" fill="#8B4513">
+        <animate attributeName="fill" values="#8B4513;#DAA520;#8B4513" dur="1s" repeatCount="indefinite"/>
+    </rect>
+    <!-- Guard -->
+    <rect x="35" y="55" width="30" height="5" fill="#DAA520">
+        <animate attributeName="fill" values="#DAA520;#FFD700;#DAA520" dur="1s" repeatCount="indefinite"/>
+    </rect>
+    <!-- Blade -->
+    <path d="M47 15 L53 15 L55 55 L45 55 Z" fill="#C0C0C0">
+        <animate attributeName="fill" values="#C0C0C0;#E8E8E8;#C0C0C0" dur="1s" repeatCount="indefinite"/>
+    </path>
+    <!-- Decoration -->
+    <circle cx="50" cy="70" r="3" fill="#DAA520">
+        <animate attributeName="fill" values="#DAA520;#FFD700;#DAA520" dur="1s" repeatCount="indefinite"/>
+    </circle>
+    <!-- Energy core -->
+    <circle cx="50" cy="50" r="5" fill="#4A90E2">
+        <animate attributeName="r" values="3;5;3" dur="0.5s" repeatCount="indefinite"/>
+        <animate attributeName="fill" values="#4A90E2;#87CEEB;#4A90E2" dur="0.5s" repeatCount="indefinite"/>
+    </circle>
+</svg>
