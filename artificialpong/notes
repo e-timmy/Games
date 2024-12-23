@@ -1,0 +1,4 @@
+Again, neither of the problems were solved. If the ball resets, the the score should tick. Print to console when updating, with the measures before and after.
+The hardcoded AI still doesn't respond after the first game if they are playing first. So the ball spawns, and the hardcoded AI doesn't move, if the other player is
+first, and hits the ball back, then the hardcoded AI does get into the action.
+It seems as though both problems are tied to the restarting of the game. Debug and solve accordingly.
