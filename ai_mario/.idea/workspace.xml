@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="fce07daf-6688-468b-b00b-d65d4c62f247" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/.idea/a_pong_2.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/ai_player.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/ball.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/config.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/evolutionary_learner.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/game_engine.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/game_event_manager.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/game_state.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/main.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/menu.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/open_learner.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/paddle.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/player.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/pong_game.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/rl_model.pth" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../a_pong_2/rl_player.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../ai_racer/ai_car.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../ai_racer/base_car.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../ai_racer/car.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../ai_racer/config.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../ai_racer/game.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../ai_racer/next" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../ai_racer/player_car.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../ai_racer/track.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../ai_racer/ui.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../artificialpong/game_state.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../artificialpong/rl_model.pth" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../artificialpong/rl_player.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../artificialpong/ball.py" beforeDir="false" afterPath="$PROJECT_DIR$/../artificialpong/ball.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../artificialpong/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/../artificialpong/game.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../artificialpong/powerup.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../artificialpong/reinforcement_ai.py" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 4
+}]]></component>
+  <component name="ProjectId" id="2qmATNNrxxC6fAGGw4j2MMWSrXe" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.main.executor": "Run",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main"
+  }
+}]]></component>
+  <component name="RunManager">
+    <configuration name="main" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="ai_mario" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-d68999036c7f-d3b881c8e49f-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-233.14475.56" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="fce07daf-6688-468b-b00b-d65d4c62f247" name="Changes" comment="" />
+      <created>1735257383626</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1735257383626</updated>
+    </task>
+    <servers />
+  </component>
+</project>

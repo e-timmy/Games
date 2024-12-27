@@ -2,7 +2,7 @@ import pygame
 from paddle import Paddle
 from ball import Ball
 from ai_player import AIPlayer
-from reinforcement_ai import RLPlayer
+from rl_player import RLPlayer, GameState
 
 
 class InputBox:
@@ -24,17 +24,13 @@ class InputBox:
         if event.type == pygame.KEYDOWN:
             if self.active:
                 if event.key == pygame.K_RETURN:
-                    print(self.text)
-                    self.active = False
+                    return True
                 elif event.key == pygame.K_BACKSPACE:
                     self.text = self.text[:-1]
                 else:
                     self.text += event.unicode
                 self.txt_surface = self.font.render(self.text, True, self.color)
-
-    def update(self):
-        width = max(200, self.txt_surface.get_width() + 10)
-        self.rect.w = width
+        return False
 
     def draw(self, screen):
         screen.blit(self.txt_surface, (self.rect.x + 5, self.rect.y + 5))
@@ -62,151 +58,77 @@ class Game:
         self.left_paddle = Paddle(20, 300, 'left')
         self.right_paddle = Paddle(760, 300, 'right')
         self.ball = Ball(400, 300)
-        self.ai_player = AIPlayer(self.right_paddle, difficulty)
         self.rl_player = RLPlayer(self.left_paddle)
+        self.ai_player = AIPlayer(self.right_paddle, difficulty)
         self.running = True
-        self.last_hit_by_ai = False
-        self.rl_score = 0
-        self.ai_score = 0
-        self.last_ball_y = self.ball.rect.y
-        self.ball_just_reset = True
-        self.speed_multiplier = 1
-        self.input_box = InputBox(550, 550, 140, 32)
-        self.apply_button = Button(700, 550, 80, 32)
-
+        self.left_wins = 0
+        self.right_wins = 0
         self.games_played = 0
-        self.rl_wins = 0
+        self.speed_multiplier = 1
+
+        # Speed control UI
+        self.input_box = InputBox(300, 550, 140, 32)
+        self.apply_button = Button(450, 550, 80, 32)
 
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
-            self.input_box.handle_event(event)
+            if self.input_box.handle_event(event):
+                try:
+                    self.speed_multiplier = float(self.input_box.text)
+                except ValueError:
+                    pass
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.apply_button.rect.collidepoint(event.pos):
                     try:
                         self.speed_multiplier = float(self.input_box.text)
-                        print(f"Speed multiplier set to: {self.speed_multiplier}")
                     except ValueError:
-                        print("Invalid input. Speed multiplier not changed.")
+                        pass
 
     def update(self):
-        print(f"Ball position: ({self.ball.rect.x}, {self.ball.rect.y})")
-        print(f"Ball just reset: {self.ball_just_reset}")
-        print(f"Last hit by AI: {self.last_hit_by_ai}")
+        # Get current game state
+        current_state = GameState(self.left_paddle, self.right_paddle, self.ball)
 
-        state = self.rl_player.get_state(self.ball, self.right_paddle)
+        # RL agent action
+        action = self.rl_player.act(current_state)
+        self.rl_player.paddle.move(action == 0, action == 2)
 
-        up, down = self.rl_player.move(self.ball, self.right_paddle)
-        moved_towards_ball = (up and self.ball.rect.y < self.left_paddle.rect.centery) or \
-                             (down and self.ball.rect.y > self.left_paddle.rect.centery)
-        self.left_paddle.move(up, down)
-
-        if self.ball_just_reset:
-            print("AI using reset_position() due to ball reset")
-            up, down = self.ai_player.reset_position()
-            self.ball_just_reset = False
-        elif self.last_hit_by_ai:
-            print("AI using reset_position() due to last hit")
-            up, down = self.ai_player.reset_position()
-        else:
-            print("AI using regular move()")
-            up, down = self.ai_player.move(self.ball)
+        # AI movement
+        up, down = self.ai_player.move(self.ball)
         self.right_paddle.move(up, down)
 
+        # Ball movement and collision detection
         self.ball.move()
+        ball_hit = self.ball.check_collision(self.left_paddle, self.right_paddle) == 'left'
 
-        scored = False
-        old_rl_score = self.rl_score
-        old_ai_score = self.ai_score
+        game_over = False
+        won = False
 
+        # Score and game counting
         if self.ball.rect.right >= 800:
-            print("Ball passed right boundary")
-            self.rl_score += 1
-            scored = True
-            print(f"Score update - RL: {old_rl_score} -> {self.rl_score}, AI: {old_ai_score} -> {self.ai_score}")
-        elif self.ball.rect.left <= 0:
-            print("Ball passed left boundary")
-            self.ai_score += 1
-            scored = True
-            print(f"Score update - RL: {old_rl_score} -> {self.rl_score}, AI: {old_ai_score} -> {self.ai_score}")
-
-        collision = self.ball.check_collision(self.left_paddle, self.right_paddle)
-
-        hit_ball = collision == 'left'
-        missed = self.ball.rect.left <= 0
-        lost = missed
-        won = self.ball.rect.right >= 800
-
-        if collision == 'right':
-            self.last_hit_by_ai = True
-            print("Ball hit AI paddle")
-        elif collision == 'left':
-            self.last_hit_by_ai = False
-            print("Ball hit RL paddle")
-
-        reward = self.rl_player.calculate_reward(hit_ball, missed, lost, won, moved_towards_ball, self.ball)
-        next_state = self.rl_player.get_state(self.ball, self.right_paddle)
-        self.rl_player.remember(state, up - down + 1, reward, next_state, lost or won)
-        self.rl_player.train()
-
-        if scored:
-            print("Resetting ball due to score")
-            self.ball.reset()
-            self.ball_just_reset = True
-            self.last_hit_by_ai = False
+            self.left_wins += 1
             self.games_played += 1
-            if won:
-                self.rl_wins += 1
+            game_over = True
+            won = True
+        elif self.ball.rect.left <= 0:
+            self.right_wins += 1
+            self.games_played += 1
+            game_over = True
+            won = False
 
-            # Update curriculum every 100 games
-            if self.games_played % 100 == 0:
-                performance = self.rl_wins / 100
-                self.rl_player.update_curriculum(performance)
-                self.rl_wins = 0
-                print(
-                    f"Games played: {self.games_played}, Performance: {performance:.2f}, Training stage: {self.rl_player.training_stage}")
+        next_state = GameState(self.left_paddle, self.right_paddle, self.ball) if not game_over else None
+        reward = self.rl_player.calculate_reward(current_state, action, ball_hit, game_over, won)
+        self.rl_player.update(current_state, action, next_state, reward, game_over)
 
-        self.last_ball_y = self.ball.rect.y
-        self.input_box.update()
-
-        if scored:
-            print("Resetting ball due to score")
+        if game_over:
             self.ball.reset()
-            self.ball_just_reset = True
-            self.last_hit_by_ai = False
 
-        self.last_ball_y = self.ball.rect.y
-        self.input_box.update()
-
-    def draw(self):
-        self.screen.fill((0, 0, 0))
-        self.left_paddle.draw(self.screen)
-        self.right_paddle.draw(self.screen)
-        self.ball.draw(self.screen)
-
-        font = pygame.font.Font(None, 36)
-        rl_score_text = font.render(f"RL: {self.rl_score}", True, (255, 255, 255))
-        ai_score_text = font.render(f"AI: {self.ai_score}", True, (255, 255, 255))
-        self.screen.blit(rl_score_text, (50, 50))
-        self.screen.blit(ai_score_text, (700, 50))
-
-        epsilon_text = font.render(f"Epsilon: {self.rl_player.epsilon:.4f}", True, (255, 255, 255))
-        self.screen.blit(epsilon_text, (300, 50))
-
-        speed_text = font.render(f"Speed: {self.speed_multiplier}x", True, (255, 255, 255))
-        self.screen.blit(speed_text, (50, 550))
-
-        self.input_box.draw(self.screen)
-        self.apply_button.draw(self.screen)
-
-        # Draw training stage and games played
-        stage_text = font.render(f"Stage: {self.rl_player.training_stage}", True, (255, 255, 255))
-        games_text = font.render(f"Games: {self.games_played}", True, (255, 255, 255))
-        self.screen.blit(stage_text, (300, 10))
-        self.screen.blit(games_text, (300, 90))
-
-        pygame.display.flip()
+            # Save model every 100 games and print progress
+            if self.games_played % 100 == 0:
+                self.rl_player.save()
+                win_rate = self.left_wins / self.games_played
+                print(f"Games: {self.games_played}, Win rate: {win_rate:.2f}")
 
     def run(self):
         while self.running:
@@ -215,6 +137,29 @@ class Game:
                 self.update()
             self.draw()
             self.clock.tick(60)
-            print("---")
 
-        print(f"Final Score - RL: {self.rl_score}, AI: {self.ai_score}")
+    def __del__(self):
+        # Save the model when the game closes
+        self.rl_player.save()
+
+    def draw(self):
+        self.screen.fill((0, 0, 0))
+        self.left_paddle.draw(self.screen)
+        self.right_paddle.draw(self.screen)
+        self.ball.draw(self.screen)
+
+        font = pygame.font.Font(None, 36)
+        left_score_text = font.render(f"RL Wins: {self.left_wins}", True, (255, 255, 255))
+        right_score_text = font.render(f"AI Wins: {self.right_wins}", True, (255, 255, 255))
+        games_text = font.render(f"Games: {self.games_played}", True, (255, 255, 255))
+        speed_text = font.render(f"Speed Multiplier:", True, (255, 255, 255))
+
+        self.screen.blit(left_score_text, (50, 50))
+        self.screen.blit(right_score_text, (650, 50))
+        self.screen.blit(games_text, (350, 50))
+        self.screen.blit(speed_text, (100, 550))
+
+        self.input_box.draw(self.screen)
+        self.apply_button.draw(self.screen)
+
+        pygame.display.flip()

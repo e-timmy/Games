@@ -1,0 +1,7 @@
+SCREEN_WIDTH = 1024  # Increased from 800
+SCREEN_HEIGHT = 768  # Increased from 600
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+TRACK_OFFSET = 30  # Reduced from 50
+TRACK_WIDTH = 160  # Increased from 100
+START_POS = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - TRACK_OFFSET - 20)
