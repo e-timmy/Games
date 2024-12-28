@@ -17,43 +17,18 @@ class BaseCar:
         self.friction = 0.97
         self.laps = 0
         self.last_checkpoint = False
-        self.race_started = False  # Add this flag
+        self.race_started = False
         self.has_crossed_first = False
         self.checkpoints_passed = set()
         self.next_checkpoint = 0
         self.lap_valid = False
         self.is_player = number == "1"
         self.current_checkpoint = None
-        if self.is_player:
-            print("Player starting - next checkpoint: 0")
-
-
-    def accelerate(self):
-        self.vel[0] += math.cos(math.radians(self.angle)) * self.acceleration
-        self.vel[1] += math.sin(math.radians(self.angle)) * self.acceleration
-        self.limit_speed()
-
-    def decelerate(self):
-        self.vel[0] -= math.cos(math.radians(self.angle)) * self.acceleration / 2
-        self.vel[1] -= math.sin(math.radians(self.angle)) * self.acceleration / 2
-        self.limit_speed()
-
-    def turn(self, angle):
-        speed = math.hypot(*self.vel)
-        if speed > 0.5:
-            self.angle += angle * (speed / self.max_speed) * 1.8
-
-    def limit_speed(self):
-        speed = math.hypot(*self.vel)
-        if speed > self.max_speed:
-            self.vel = [v / speed * self.max_speed for v in self.vel]
 
     def reset_checkpoint_progress(self):
         self.checkpoints_passed.clear()
         self.next_checkpoint = 0
         self.lap_valid = False
-        if self.is_player:
-            print("Progress reset - starting over from checkpoint 0")
 
     def update(self, track):
         # Update position
@@ -79,48 +54,49 @@ class BaseCar:
 
         # Handle checkpoint logic
         if checkpoint_hit is not None:
-            if checkpoint_hit != self.current_checkpoint:  # Only process if it's a new checkpoint
+            if checkpoint_hit != self.current_checkpoint:
                 self.current_checkpoint = checkpoint_hit
                 if checkpoint_hit == self.next_checkpoint:
-                    # Correct checkpoint hit
                     self.checkpoints_passed.add(checkpoint_hit)
                     self.next_checkpoint = (checkpoint_hit + 1) % len(track.checkpoints)
                     self.lap_valid = len(self.checkpoints_passed) == len(track.checkpoints)
-                    if self.is_player:
-                        print(f"Checkpoint {checkpoint_hit} crossed! Next checkpoint: {self.next_checkpoint}")
-                        print(f"Checkpoints passed: {self.checkpoints_passed}")
-                        print(f"Lap valid: {self.lap_valid}")
                 elif checkpoint_hit not in self.checkpoints_passed:
-                    # Only reset if hitting an upcoming checkpoint out of order
-                    if self.is_player:
-                        print(f"Wrong checkpoint! Hit {checkpoint_hit} but expected {self.next_checkpoint}")
                     self.reset_checkpoint_progress()
-                # If hitting an already-passed checkpoint, do nothing
         else:
             self.current_checkpoint = None
 
         # Check for lap completion
         if track.start_line.collidepoint(self.pos):
             if not self.last_checkpoint:
-                if self.is_player:
-                    print(f"Crossing start line. Lap valid: {self.lap_valid}")
                 if self.lap_valid:
                     if self.has_crossed_first:
                         self.laps += 1
-                        if self.is_player:
-                            print(f"LAP COMPLETED! New lap count: {self.laps}")
-                    elif self.is_player:
-                        print("First crossing of start line - lap not counted yet")
                     self.reset_checkpoint_progress()
-                elif self.is_player:
-                    print("Crossed start line but lap not valid - checkpoints missing")
                 self.last_checkpoint = True
         else:
             if self.last_checkpoint:
                 self.has_crossed_first = True
-                if self.is_player:
-                    print("Left start line area")
             self.last_checkpoint = False
+
+    def accelerate(self):
+        self.vel[0] += math.cos(math.radians(self.angle)) * self.acceleration
+        self.vel[1] += math.sin(math.radians(self.angle)) * self.acceleration
+        self.limit_speed()
+
+    def decelerate(self):
+        self.vel[0] -= math.cos(math.radians(self.angle)) * self.acceleration / 2
+        self.vel[1] -= math.sin(math.radians(self.angle)) * self.acceleration / 2
+        self.limit_speed()
+
+    def turn(self, angle):
+        speed = math.hypot(*self.vel)
+        if speed > 0.5:
+            self.angle += angle * (speed / self.max_speed) * 1.8
+
+    def limit_speed(self):
+        speed = math.hypot(*self.vel)
+        if speed > self.max_speed:
+            self.vel = [v / speed * self.max_speed for v in self.vel]
 
     def draw(self, screen):
         rotated_surface = pygame.Surface((self.size[0] + 10, self.size[1] + 10), pygame.SRCALPHA)

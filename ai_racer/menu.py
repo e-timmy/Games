@@ -42,12 +42,17 @@ class PlayerConfigUI:
         self.control_scheme = "arrows" if player_num == 1 else "wasd"
 
     def handle_event(self, event):
-        if self.player_type == "AI":
-            self.difficulty.handle_event(event)
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.type_button.rect.collidepoint(event.pos) and self.can_be_human:
-                self.player_type = "AI" if self.player_type == "Human" else "Human"
-                self.type_button.text = "AI" if self.player_type == "AI" else "HUM"
+                if self.player_type == "Human":
+                    self.player_type = "AI"
+                    self.type_button.text = "AI"
+                elif self.player_type == "AI":
+                    self.player_type = "RL"
+                    self.type_button.text = "RL"
+                else:
+                    self.player_type = "Human"
+                    self.type_button.text = "HUM"
                 self.type_button.txt_surface = self.type_button.font.render(
                     self.type_button.text, True, pygame.Color('white'))
 
@@ -81,6 +86,7 @@ class Button:
         text_rect = self.txt_surface.get_rect(center=self.rect.center)
         screen.blit(self.txt_surface, text_rect)
 
+
 class Menu:
     def __init__(self, screen):
         self.screen = screen
@@ -92,14 +98,12 @@ class Menu:
         self.columns = 2
         self.rows_visible = 5
 
-        # Title font
         self.title_font = pygame.font.Font(None, 64)
         self.subtitle_font = pygame.font.Font(None, 32)
 
         self.configs = []
         self.add_initial_config()
 
-        # Add lap count selection
         self.lap_input = InputBox(20, self.screen_height - 120, 80, 40, "0")
         self.lap_label = self.subtitle_font.render("Number of Laps (0 = infinite):", True, (255, 255, 255))
 
@@ -107,21 +111,26 @@ class Menu:
         self.add_button = Button(20, button_y, 80, 40, "+", pygame.Color('green'))
         self.start_button = Button(self.screen_width - 100, button_y, 80, 40, "Start", pygame.Color('blue'))
 
-    def add_initial_config(self):
-        x = (self.screen_width - self.config_width) // 2  # Center horizontally
-        y = self.margin + 100  # Offset for title
-        self.add_config_at_position(x, y)
-
     def get_config_position(self, index):
+        # Calculate the total width needed for the grid
         total_width = self.columns * (self.config_width + self.margin)
-        start_x = (self.screen_width - total_width) // 2  # Center the entire grid
+        # Center the entire grid horizontally
+        start_x = (self.screen_width - total_width) // 2
 
+        # Calculate column and row
         col = index % self.columns
         row = index // self.columns
 
+        # Calculate x and y positions
         x = start_x + col * (self.config_width + self.margin)
-        y = self.margin + row * (self.config_height + self.margin) + 100
+        y = self.margin + row * (self.config_height + self.margin) + 100  # 100 is offset for title
+
         return x, y
+
+    def add_initial_config(self):
+        # Use the standard positioning for the first config
+        x, y = self.get_config_position(0)
+        self.add_config_at_position(x, y)
 
     def add_config_at_position(self, x, y):
         new_config = PlayerConfigUI(x, y, self.config_width, self.config_height, len(self.configs) + 1)
@@ -130,21 +139,21 @@ class Menu:
     def run(self):
         running = True
         while running:
-            self.screen.fill((40, 40, 40))  # Darker background
+            self.screen.fill((40, 40, 40))
 
             # Draw title
             title = self.title_font.render("Racing Game", True, (255, 255, 255))
-            title_rect = title.get_rect(centerx=self.screen_width/2, y=20)
+            title_rect = title.get_rect(centerx=self.screen_width / 2, y=20)
             self.screen.blit(title, title_rect)
 
             # Draw subtitle
             subtitle = self.subtitle_font.render("Configure Players", True, (200, 200, 200))
-            subtitle_rect = subtitle.get_rect(centerx=self.screen_width/2, y=70)
+            subtitle_rect = subtitle.get_rect(centerx=self.screen_width / 2, y=70)
             self.screen.blit(subtitle, subtitle_rect)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    return []
+                    return [], 0
 
                 for config in self.configs:
                     config.handle_event(event)
@@ -169,11 +178,9 @@ class Menu:
             for config in self.configs:
                 config.draw(self.screen)
 
-            # Draw lap count input
             self.screen.blit(self.lap_label, (20, self.screen_height - 150))
             self.lap_input.draw(self.screen)
 
-            # Draw control buttons
             if len(self.configs) < 10:
                 self.add_button.draw(self.screen)
             self.start_button.draw(self.screen)
@@ -185,18 +192,25 @@ class Menu:
     def _create_player_configs(self):
         player_configs = []
         for config_ui in self.configs:
+            print(f"Creating config with player type: {config_ui.player_type}")
             if config_ui.player_type == "Human":
                 player_configs.append(PlayerConfig(
                     "Human",
                     config_ui.control_scheme,
                     None
                 ))
-            else:
-                try:
-                    difficulty = float(config_ui.difficulty.text)
-                    player_configs.append(PlayerConfig("AI", None, difficulty))
-                except ValueError:
-                    player_configs.append(PlayerConfig("AI", None, 1.0))
+            elif config_ui.player_type == "RL":
+                player_configs.append(PlayerConfig(
+                    "RL",
+                    None,
+                    None
+                ))
+            else:  # AI
+                player_configs.append(PlayerConfig(
+                    "AI",
+                    None,
+                    config_ui.difficulty
+                ))
         return player_configs
 
 class PlayerConfig:

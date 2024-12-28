@@ -1,1 +1,23 @@
-- solve the backtracking lap phenomenon.
+
+
+
+Model 1:
+
+Training Summary:
+Total episodes: 73
+Total steps: 124773
+Total reward: -1179254.11
+Best episode reward: 100.81
+
+Averages per episode:
+Steps: 1705.3
+Reward: -16114.74
+Checkpoints: 0.0
+Collisions: 2.1
+
+Learning progression:
+Episodes 0-13: Avg reward = -18660.87
+Episodes 14-27: Avg reward = -7042.65
+Episodes 28-41: Avg reward = -3958.30
+Episodes 42-55: Avg reward = -6522.94
+Episodes 56-69: Avg reward = -39578.87
