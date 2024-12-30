@@ -10,6 +10,7 @@ from game_state import GameState
 from countdown_lights import CountdownLights
 from victory_screen import VictoryScreen
 from config import SCREEN_WIDTH, SCREEN_HEIGHT
+from waypoints import WaypointVisualizer
 
 
 class Game:
@@ -20,6 +21,7 @@ class Game:
         self.game_state = GameState(SCREEN_WIDTH, SCREEN_HEIGHT, self.track)
         self.countdown_lights = None if headless else CountdownLights(self.track)
         self.target_laps = target_laps
+        self.waypoint_visualizer = WaypointVisualizer(self.track)
 
         # Initialize cars
         self.cars = []
@@ -85,6 +87,7 @@ class Game:
             print(f"Race completion: {progress:.1f}%")
 
     def update(self):
+
         if self.headless:
             return self._update_headless()
         else:
@@ -92,6 +95,10 @@ class Game:
 
     def _update_visual(self):
         # Existing update logic for visual mode
+        for car in self.cars:
+            if car.is_player:  # Only update for the human player
+                self.waypoint_visualizer.update(car.pos)
+
         if self.waiting_for_continue:
             keys = pygame.key.get_pressed()
             if keys[pygame.K_RETURN]:
@@ -142,6 +149,7 @@ class Game:
         self.screen.fill((0, 100, 0))
         self.track.draw(self.screen)
         self.countdown_lights.draw(self.screen, self.game_state)
+        self.waypoint_visualizer.draw(self.screen)
 
         for car in self.cars:
             car.draw(self.screen)
@@ -238,7 +246,8 @@ class Game:
                     self.game_state.race_started = True
 
     def __del__(self):
-        # Save reinforcement learner models when game ends
-        for car in self.cars:
-            if isinstance(car, ReinforcementLearner):
-                car.save_model()
+        # # Save reinforcement learner models when game ends
+        # for car in self.cars:
+        #     if isinstance(car, ReinforcementLearner):
+        #         car.save_model()
+        ...
