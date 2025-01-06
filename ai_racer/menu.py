@@ -44,10 +44,14 @@ class PlayerConfigUI:
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.type_button.rect.collidepoint(event.pos) and self.can_be_human:
+                # In the handle_event method, modify the type switching logic:
                 if self.player_type == "Human":
                     self.player_type = "AI"
                     self.type_button.text = "AI"
                 elif self.player_type == "AI":
+                    self.player_type = "AI2"
+                    self.type_button.text = "AI2"
+                elif self.player_type == "AI2":
                     self.player_type = "RL"
                     self.type_button.text = "RL"
                 else:
@@ -205,6 +209,14 @@ class Menu:
                     None,
                     None
                 ))
+
+            elif config_ui.player_type == "AI2":
+                player_configs.append(PlayerConfig(
+                    "AI2",
+                    None,
+                    float(config_ui.difficulty.text)
+                ))
+
             else:  # AI
                 player_configs.append(PlayerConfig(
                     "AI",

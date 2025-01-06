@@ -25,9 +25,9 @@ class Player(BaseCar):
         if keys[self.keys[3]]:  # RIGHT
             self.turn(self.turn_speed)
 
-        # Update waypoint visualizer
-        if self.waypoint_visualizer:
-            self.waypoint_visualizer.update(self.pos)
+        # # Update waypoint visualizer
+        # if self.waypoint_visualizer:
+        #     self.waypoint_visualizer.update(self.pos)
 
     def draw(self, screen):
         super().draw(screen)

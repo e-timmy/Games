@@ -1,1 +1,7 @@
-Provide more information: speed of car, past movements.
+Solve this issue in game with A:
+
+                car = AI(pos, self.get_player_color(i), str(i + 1), self.track, difficulty=config.difficulty)
+produces:
+line 41, in __init__
+    car = AI(pos, self.get_player_color(i), str(i + 1), self.track, difficulty=CONFIG.difficulty)
+AttributeError: 'dict' object has no attribute 'difficulty'

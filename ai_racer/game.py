@@ -1,6 +1,8 @@
 import threading
 import time
 import pygame
+
+from AI2 import AI2
 from player import Player
 from ai import AI
 from reinforcement_learner import ReinforcementLearner
@@ -33,9 +35,12 @@ class Game:
                 keys = ["UP", "DN", "LT", "RT"] if config.control_scheme == "arrows" else ["W", "S", "A", "D"]
                 car = Player(pos, self.get_player_color(i), str(i + 1), keys)
             elif config.player_type == "RL":
-                car = ReinforcementLearner(pos, self.get_player_color(i), str(i + 1), self.track)
+                car = ReinforcementLearner(pos, self.get_player_color(i), str(i + 1), self.track, self.waypoint_visualizer)
+            elif config.player_type == "AI2":
+                car = AI2(pos, self.get_player_color(i), str(i + 1), self.track, difficulty=config.difficulty)
             else:
-                car = AI(pos, self.get_player_color(i), str(i + 1), self.track, difficulty=config.difficulty)
+                car = AI(pos, self.get_player_color(i), str(i + 1), self.track)
+                # car = AI(pos, self.get_player_color(i), str(i + 1), self.track, difficulty=config.difficulty)
             self.cars.append(car)
 
         self.ui = None if headless else UI(screen)
@@ -96,8 +101,7 @@ class Game:
     def _update_visual(self):
         # Existing update logic for visual mode
         for car in self.cars:
-            if car.is_player:  # Only update for the human player
-                self.waypoint_visualizer.update(car.pos)
+            self.waypoint_visualizer.update(car.pos)
 
         if self.waiting_for_continue:
             keys = pygame.key.get_pressed()
@@ -153,6 +157,9 @@ class Game:
 
         for car in self.cars:
             car.draw(self.screen)
+            # Draw the AI's action
+            if isinstance(car, ReinforcementLearner):
+                car.draw_action(self.screen)
 
         self.ui.draw(self.screen)
 
