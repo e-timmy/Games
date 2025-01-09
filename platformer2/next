@@ -1,0 +1,10 @@
+- inclusion of enemies
+- platforms that die/fall
+- moving platforms
+
+I want adjustment to the background - the buildings all overlap each other - but I want them to be separated, some lights in their windows should be on and off.
+
+So some issues:
+- my first playthrough I failed to see any falling platforms. Looking at the level_generator code, everything seems alright. After a few retries I managed to catch one that had spawned on initial screen, and saw that it was falling immediately. So, it seems to me that all falling platforms are spawned, and then fall before the player every sees them let alone stands on them.
+- I have an issue with how the platforms are being generated in general. They shouldn't just be placed, they should be utilised when there is a large gap that cannot be cleared with a regular jump. Rework the design of the level_generator to ensure this functionality.
+

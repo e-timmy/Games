@@ -8,9 +8,12 @@ PLAYER_WIDTH = 30
 PLAYER_HEIGHT = 60
 PLAYER_DUCKED_HEIGHT = 30
 PLAYER_SPEED = 300
-JUMP_FORCE = -600  # Increased jump force
+JUMP_FORCE = -600
 START_X = 100
 START_Y = 300
+
+BUILDING_GAP = 50  # Gap between buildings
+WINDOW_LIGHT_PROBABILITY = 0.7
 
 # Level generation constants
 CHUNK_WIDTH = 800
@@ -19,11 +22,62 @@ MAX_GAP_WIDTH = 200
 MIN_PLATFORM_WIDTH = 200
 MAX_PLATFORM_WIDTH = 400
 GROUND_HEIGHT = 100
-PLATFORM_THICKNESS = 20
-MIN_PLATFORM_HEIGHT = 150  # Minimum height for elevated platforms
-MAX_PLATFORM_HEIGHT = 300  # Maximum height for elevated platforms
+PLATFORM_THICKNESS = 10
+MIN_PLATFORM_HEIGHT = 150
+MAX_PLATFORM_HEIGHT = 300
 
-# Colors
-BACKGROUND_COLOR = (50, 50, 50)
-PLAYER_COLOR = (255, 0, 0)
-GROUND_COLOR = (0, 255, 0)
+# Window colors
+WINDOW_COLOR_LIT = (0, 255, 255, 100)  # Bright cyan, semi-transparent
+WINDOW_COLOR_UNLIT = (0, 50, 50, 150)  # Dark cyan, more opaque
+
+# Colors (Tron-inspired)
+BACKGROUND_COLOR = (0, 10, 20)
+PLAYER_COLOR = (0, 255, 255)  # Cyan
+GROUND_COLOR = (0, 200, 200)  # Light cyan
+PLATFORM_COLOR = (0, 150, 150)  # Darker cyan
+BUILDING_COLOR = (0, 50, 100)  # Dark blue
+WINDOW_COLOR = (0, 255, 255, 50)  # Semi-transparent cyan
+
+# Background constants
+NUM_BUILDINGS = 5
+MIN_BUILDING_WIDTH = 100
+MAX_BUILDING_WIDTH = 200
+MIN_BUILDING_HEIGHT = 200
+MAX_BUILDING_HEIGHT = 400
+WINDOW_SIZE = 20
+WINDOW_SPACING = 30
+
+# Falling Platform constants
+FALLING_PLATFORM_COLOR = (255, 0, 0)  # Red color for falling platforms
+FALLING_PLATFORM_WIDTH = 100
+FALLING_PLATFORM_HEIGHT = 20
+FALLING_PLATFORM_DELAY = 1  # Seconds before the platform starts falling
+FALLING_PLATFORM_SPEED = 200  # Pixels per second
+
+# Moving Platform constants
+MOVING_PLATFORM_COLOR = (0, 255, 0)  # Green color for moving platforms
+MOVING_PLATFORM_WIDTH = 150
+MOVING_PLATFORM_HEIGHT = 20
+MOVING_PLATFORM_SPEED = 100  # Pixels per second
+MOVING_PLATFORM_RANGE = 300  # Range of movement
+
+PLAYER_JUMP_DISTANCE = 200  # Approximate distance a player can jump
+
+PLATFORM_REGULAR = 0
+PLATFORM_FALLING = 1
+PLATFORM_MOVING = 2
+
+COLLISION_TYPE_PLAYER = 1
+COLLISION_TYPE_PLATFORM = 2
+
+# Enemy constants
+ENEMY_WIDTH = 30
+ENEMY_HEIGHT = 30
+ENEMY_COLOR = (255, 0, 0)  # Red
+ENEMY_EYE_COLOR = (255, 100, 100)  # Lighter red
+ENEMY_GLOW_COLOR = (255, 100, 100)  # Same as eye color for glowing effect
+ENEMY_PATROL_SPEED = 50
+ENEMY_CHARGE_SPEED = 200
+ENEMY_SPAWN_PROBABILITY = 0.3  # 30% chance for an enemy to spawn on a platform
+
+
