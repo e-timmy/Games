@@ -1,0 +1,2 @@
+Great, that solves the character moving through the obstacles. However, the AI now has a new problem, it just moves to the right and then gets stuck on an obstacle, even if its one tile, never jumping. Also, if the player holds down the jump button, then they soar into the sky, this shouldn't happen. Revise the code accordingly.
+

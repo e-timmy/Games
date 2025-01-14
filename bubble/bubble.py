@@ -3,7 +3,8 @@ import random
 import math
 from colors import BUBBLE_COLORS
 from settings import (SCREEN_WIDTH, SCREEN_HEIGHT, WOBBLE_AMOUNT,
-                      MAX_BUBBLE_SIZE, ABSORPTION_RATE)
+                      MAX_BUBBLE_SIZE, ABSORPTION_RATE, STICKY_FACTOR)
+
 
 class Bubble:
     def __init__(self, x, y, size, dx, dy):
@@ -43,11 +44,20 @@ class Bubble:
 
     def absorb(self, other):
         if self.size > other.size:
+            # Calculate absorption amount
             size_diff = self.size - other.size
             absorption_amount = min(ABSORPTION_RATE, size_diff, other.size)
+
+            # Update sizes
             self.size += absorption_amount
             other.size -= absorption_amount
             self.size = min(self.size, MAX_BUBBLE_SIZE)  # Limit maximum size
+
+            # Make velocities "sticky" - larger bubble pulls smaller one's velocity
+            self.dx = self.dx * (1 - STICKY_FACTOR) + other.dx * STICKY_FACTOR
+            self.dy = self.dy * (1 - STICKY_FACTOR) + other.dy * STICKY_FACTOR
+            other.dx = other.dx * (1 - STICKY_FACTOR) + self.dx * STICKY_FACTOR
+            other.dy = other.dy * (1 - STICKY_FACTOR) + self.dy * STICKY_FACTOR
 
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), int(self.size))

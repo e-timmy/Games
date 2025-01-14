@@ -1,4 +1,8 @@
-- Make player float, drift and what not - harder to control ... kind of like space invaders.
 - allow bullets for dividing up the bubbles further.
 
-- the ebs/flows of the bubbles should be visual on the screen like wind.
+- make split in bubbles remain semi-circles and more naturally transform.
+- bullet should take from the size of the player!
+- movement should create bullets.
+- change colour of bubbles.
+
+- factoring in difficulty? Scaling...
