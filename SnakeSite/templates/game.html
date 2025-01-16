@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Interactive Space{% endblock %}
+
+{% block content %}
+<div class="game-container">
+    <canvas id="gameCanvas"></canvas>
+    <div class="game-overlay">
+        <div id="score">0</div>
+        <nav class="game-nav">
+            <a href="#" class="nav-item" data-route="home">Home</a>
+            <a href="#" class="nav-item" data-route="about">About</a>
+            <a href="#" class="nav-item" data-route="contact">Contact</a>
+        </nav>
+        <div class="content-area">
+            <div id="home-content" class="content-section active">
+                <h1>Welcome to My Interactive Space</h1>
+                <p>Guide the snake to different sections to explore the site!</p>
+            </div>
+            <div id="about-content" class="content-section">
+                <h1>About Me</h1>
+                <p>I'm a developer who loves creating unique interactive experiences.</p>
+            </div>
+            <div id="contact-content" class="content-section">
+                <h1>Get in Touch</h1>
+                <p>Email: example@email.com</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/snake.js') }}"></script>
+{% endblock %}

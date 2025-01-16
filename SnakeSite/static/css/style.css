@@ -1,0 +1,195 @@
+:root {
+    --primary-bg: #0a0a0a;
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --accent-color: #646cff;
+    --nav-bg: rgba(20, 20, 20, 0.95);
+    --section-bg: rgba(20, 20, 20, 0.85);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+    background: var(--primary-bg);
+    line-height: 1.6;
+}
+
+.game-container {
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+}
+
+#gameCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    opacity: 0.8; /* Make game slightly subtle */
+}
+
+.game-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.content-wrapper {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+#score {
+    position: absolute;
+    top: 2rem;
+    right: 2rem;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    font-weight: 500;
+    background: var(--nav-bg);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+}
+
+.game-nav {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 1rem;
+    background: var(--nav-bg);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+    margin-bottom: 3rem;
+}
+
+.nav-item {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    pointer-events: auto;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+.nav-item:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-item.active {
+    color: var(--text-primary);
+    background: var(--accent-color);
+}
+
+.content-area {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.content-section {
+    color: var(--text-primary);
+    opacity: 0;
+    transition: all 0.5s ease;
+    position: absolute;
+    pointer-events: none;
+    width: 100%;
+    max-width: 800px;
+    padding: 3rem;
+    background: var(--section-bg);
+    border-radius: 24px;
+    backdrop-filter: blur(10px);
+    display: none;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.content-section.active {
+    opacity: 1;
+    display: block;
+    transform: translateY(0);
+}
+
+.content-section h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+}
+
+.content-section p {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+
+/* Section-specific styles */
+#home {
+    text-align: center;
+}
+
+#about {
+    text-align: left;
+}
+
+#projects {
+    text-align: left;
+}
+
+.project-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.project-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1.5rem;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.project-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+#contact {
+    text-align: center;
+}
+
+.contact-links {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.contact-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.contact-link:hover {
+    color: var(--accent-color);
+}

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Name - Interactive Portfolio</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div class="game-overlay">
+            <div class="content-wrapper">
+                <nav class="game-nav">
+                    <div class="nav-item" data-section="home">Home</div>
+                    <div class="nav-item" data-section="about">About</div>
+                    <div class="nav-item" data-section="projects">Projects</div>
+                    <div class="nav-item" data-section="contact">Contact</div>
+                </nav>
+
+                <div class="content-area">
+                    <section id="home" class="content-section active">
+                        <h1>John Doe</h1>
+                        <p>Full-Stack Developer & Creative Technologist</p>
+                        <p>Use arrow keys to navigate the snake or click the menu items above</p>
+                    </section>
+
+                    <section id="about" class="content-section">
+                        <h1>About Me</h1>
+                        <p>I'm a developer passionate about creating unique interactive experiences that blend technology with creativity.</p>
+                        <p>Specializing in:</p>
+                        <ul>
+                            <li>Full-Stack Development</li>
+                            <li>Interactive Installations</li>
+                            <li>Creative Coding</li>
+                        </ul>
+                    </section>
+
+                    <section id="projects" class="content-section">
+                        <h1>Featured Projects</h1>
+                        <div class="project-grid">
+                            <div class="project-card">
+                                <h3>Project 1</h3>
+                                <p>Interactive web experience</p>
+                            </div>
+                            <div class="project-card">
+                                <h3>Project 2</h3>
+                                <p>Mobile application</p>
+                            </div>
+                            <div class="project-card">
+                                <h3>Project 3</h3>
+                                <p>Data visualization</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="contact" class="content-section">
+                        <h1>Get in Touch</h1>
+                        <p>I'm always open to discussing new projects and opportunities.</p>
+                        <div class="contact-links">
+                            <a href="mailto:your@email.com" class="contact-link">Email</a>
+                            <a href="https://linkedin.com" class="contact-link">LinkedIn</a>
+                            <a href="https://github.com" class="contact-link">GitHub</a>
+                        </div>
+                    </section>
+                </div>
+            </div>
+            <div id="score">Score: <span>0</span></div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/particles.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/snake.js') }}"></script>
+</body>
+</html>
