@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vintage Blackjack</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="table">
+        <div class="dealer-area">
+            <div class="score dealer-score"></div>
+            <div class="cards dealer-cards"></div>
+        </div>
+
+        <div class="deck-area">
+            <div class="deck"></div>
+        </div>
+
+        <div class="player-area">
+            <div class="cards player-cards"></div>
+            <div class="score player-score"></div>
+        </div>
+
+        <div class="betting-area"></div>
+
+        <div class="controls">
+            <button id="deal-button">Deal</button>
+            <button id="hit-button" disabled>Hit</button>
+            <button id="stay-button" disabled>Stay</button>
+        </div>
+
+        <div class="chip-rack">
+            <div class="chip" data-value="5">$5</div>
+            <div class="chip" data-value="25">$25</div>
+            <div class="chip" data-value="100">$100</div>
+            <div class="chip" data-value="500">$500</div>
+        </div>
+
+        <div class="balance-display">Balance: $1000</div>
+
+        <div class="message"></div>
+    </div>
+
+    <script src="deck.js"></script>
+    <script src="card.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div id="setup" class="setup-container">
+        <h1>Grid Game Setup</h1>
+        <div class="player-setup">
+            <h2>Player 1</h2>
+            <div class="graphic-selection">
+                <img src="{{ url_for('static', filename='graphic1.jpg') }}" alt="Graphic 1" data-graphic="1">
+                <img src="{{ url_for('static', filename='graphic2.jpg') }}" alt="Graphic 2" data-graphic="2">
+                <!-- Add more graphic options -->
+            </div>
+        </div>
+        <div class="player-setup">
+            <h2>Player 2</h2>
+            <div class="graphic-selection">
+                <img src="{{ url_for('static', filename='graphic1.jpg') }}" alt="Graphic 1" data-graphic="1">
+                <img src="{{ url_for('static', filename='graphic2.jpg') }}" alt="Graphic 2" data-graphic="2">
+                <!-- Add more graphic options -->
+            </div>
+        </div>
+        <div class="grid-size-selection">
+            <label for="grid-size">Grid Size:</label>
+            <select id="grid-size">
+                <option value="3">3x3</option>
+                <option value="4">4x4</option>
+                <option value="5">5x5</option>
+                <!-- Add more size options -->
+            </select>
+        </div>
+        <button id="start-game">Start Game</button>
+    </div>
+
+    <div id="game" class="game-container hidden">
+        <div class="game-info">
+            <div id="player1-info">
+                <span id="player1-score">0</span>
+                <img id="player1-graphic" src="" alt="Player 1">
+            </div>
+            <div id="current-turn"></div>
+            <div id="player2-info">
+                <img id="player2-graphic" src="" alt="Player 2">
+                <span id="player2-score">0</span>
+            </div>
+        </div>
+        <div id="game-board"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='game.js') }}"></script>
+</body>
+</html>

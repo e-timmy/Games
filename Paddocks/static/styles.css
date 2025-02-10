@@ -1,0 +1,114 @@
+:root {
+    --primary-color: #3498db;
+    --secondary-color: #2ecc71;
+    --background-color: #ecf0f1;
+    --text-color: #34495e;
+}
+
+* {
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    margin: 0;
+    padding: 20px;
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+.hidden {
+    display: none;
+}
+
+.setup-container, .game-container {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.graphic-selection img {
+    width: 50px;
+    height: 50px;
+    margin: 10px;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.graphic-selection img.selected {
+    border-color: var(--primary-color);
+}
+
+#game-board {
+    margin-top: 20px;
+    border: 2px solid var(--primary-color);
+}
+
+.game-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+#player1-info, #player2-info {
+    display: flex;
+    align-items: center;
+}
+
+#player1-info img, #player2-info img {
+    width: 30px;
+    height: 30px;
+    margin-left: 10px;
+}
+
+#game-board {
+    position: relative;
+    background-color: #fff;
+    border: 2px solid var(--primary-color);
+}
+
+.node {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+}
+
+.line {
+    position: absolute;
+    background-color: #ddd;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.line:hover {
+    background-color: #bbb;
+}
+
+.line.player1 {
+    /* This will be set dynamically based on player1's graphic */
+}
+
+.line.player2 {
+    /* This will be set dynamically based on player2's graphic */
+}
+
+.horizontal-line {
+    height: 6px;
+}
+
+.vertical-line {
+    width: 6px;
+}
+
+.square {
+    position: absolute;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    z-index: 1;
+}

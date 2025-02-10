@@ -1,0 +1,17 @@
+Model A:
+- Cards and hud still overlapping.
+- Endgame messages should fade in and out in more subtle manner.
+- Cards should clear at end of game (slide back into deck)
+
+
+Model B:
+- There is room for each element but remains a little bit crowded.
+- Cards need to be cleared at end of game.
+- Money shouldn't reset. Player should be informed of how much won or lost.
+
+Extras:
+- rather than number of chips, should be stacked up
+- on latter point, perspective should be less over the top of the table and more from an angle, to see the stacks
+- when winning, chips sliding into player's totals.
+- Cards should clear at end of game (slide back into deck)
+- shuffle animation for deck before dealing.

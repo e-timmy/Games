@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jump Up!</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="player">
+            <div class="rocket-boost"></div>
+            <div class="player-spraycans"></div>
+            <div class="spray-effect"></div>
+        </div>
+        <div id="score">0</div>
+        <div id="gameOver">
+            <h2>Game Over!</h2>
+            <p>Score: <span id="finalScore">0</span></p>
+            <button onclick="location.reload()">Play Again</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

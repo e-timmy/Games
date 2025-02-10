@@ -1,0 +1,283 @@
+/* Base styles */
+body {
+    margin: 0;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(#87CEEB, #E0F7FA);
+    font-family: 'Comic Sans MS', cursive;
+}
+
+#gameContainer {
+    position: relative;
+    width: 400px;
+    height: 600px;
+    background: linear-gradient(#E0F7FA, #B2EBF2);
+    overflow: hidden;
+    border: 8px solid #FFF;
+    border-radius: 20px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.2);
+}
+
+/* Player styles */
+#player {
+    position: absolute;
+    width: 20px;
+    height: 30px;
+    background-color: #4CAF50;
+    border-radius: 10px 10px 0 0;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    will-change: transform;
+    transform-origin: center;
+}
+
+#player.flipping {
+    animation: flip 0.5s linear;
+}
+
+@keyframes flip {
+    0% { transform: translate(var(--player-x), var(--player-y)) rotate(0deg); }
+    100% { transform: translate(var(--player-x), var(--player-y)) rotate(360deg); }
+}
+
+#player::before {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 2px;
+    width: 8px;
+    height: 10px;
+    background-color: #388E3C;
+    border-radius: 0 0 5px 5px;
+    box-shadow: 8px 0 0 #388E3C;
+    z-index: 2;
+}
+
+#player::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 10px;
+    background: #2a914b;
+    border-radius: 10px 10px 0 0;
+}
+
+/* Rocket styles */
+.rocket-boost {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 15px;
+    height: 25px;
+    background-color: #FFD700;
+    border-radius: 5px;
+    transform: translate(-50%, -50%) rotate(90deg);
+    z-index: -1;
+}
+
+#player.with-rocket .rocket-boost {
+    display: block;
+}
+
+/* Platform styles */
+.platform {
+    position: absolute;
+    height: 8px;
+    background: linear-gradient(#4FC3F7, #29B6F6);
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    will-change: transform;
+}
+
+.platform.breakable {
+    background: linear-gradient(#FFB74D, #FFA726);
+    position: relative;
+    overflow: hidden;
+}
+
+.platform.breakable::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 2px;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    transform: translateX(-50%);
+}
+
+/* Trampoline styles */
+.trampoline {
+    position: absolute;
+    width: 30px;
+    height: 10px;
+    background: linear-gradient(#E91E63, #D81B60);
+    border-radius: 10px;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: bounce 1s infinite;
+}
+
+/* Enemy styles */
+.enemy {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: #FF4081;
+    border-radius: 50%;
+    pointer-events: none;
+    will-change: transform;
+}
+
+.enemy-inner {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    animation: spin 2s linear infinite;
+}
+
+.enemy-inner::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    background: repeating-conic-gradient(
+        from 0deg,
+        #FF4081 0deg 30deg,
+        transparent 30deg 60deg
+    );
+    border-radius: inherit;
+    opacity: 0.8;
+}
+
+/* Spray can styles */
+.spraycan {
+    position: absolute;
+    width: 10px;
+    height: 15px;
+    border-radius: 2px;
+    will-change: transform;
+}
+
+.spraycan::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 3px;
+    background-color: inherit;
+    filter: brightness(0.8);
+    border-radius: 3px 3px 0 0;
+}
+
+.player-spraycans {
+    position: absolute;
+    top: 50%;  /* Position at waist level */
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 2px;
+    z-index: 3;
+}
+
+.player-spraycan {
+    width: 6px;
+    height: 8px;
+    border-radius: 1px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.spray-effect {
+    position: absolute;
+    width: 20px;
+    height: 0;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0.7;
+    transition: height 0.3s;
+}
+
+/* Rocket item styles */
+.rocket {
+    position: absolute;
+    width: 20px;
+    height: 40px;
+    background-color: #FFD700;
+    clip-path: polygon(50% 0%, 100% 100%, 50% 80%, 0% 100%);
+    will-change: transform;
+}
+
+/* Weather styles */
+.wind-particle {
+    position: absolute;
+    width: 20px;
+    height: 2px;
+    background-color: rgba(255, 255, 255, 0.5);
+    pointer-events: none;
+}
+
+/* UI styles */
+#score {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    color: #FF6B6B;
+    font-size: 24px;
+    background-color: rgba(255,255,255,0.9);
+    padding: 10px 20px;
+    border-radius: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+#gameOver {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(255,255,255,0.9);
+    padding: 20px;
+    border-radius: 20px;
+    text-align: center;
+    display: none;
+    z-index: 100;
+}
+
+#gameOver button {
+    background-color: #FF6B6B;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    color: white;
+    font-family: 'Comic Sans MS', cursive;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+/* Animations */
+@keyframes bounce {
+    0%, 100% { transform: translateX(-50%) scaleY(1); }
+    50% { transform: translateX(-50%) scaleY(0.8); }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes break-animation {
+    0% { transform: translateY(var(--camera-y)) scale(1); opacity: 1; }
+    100% { transform: translateY(calc(var(--camera-y) + 20px)) scale(0.8); opacity: 0; }
+}
+
+.platform.breaking {
+    animation: break-animation 0.3s forwards;
+}
