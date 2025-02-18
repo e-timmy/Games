@@ -37,13 +37,15 @@
             maxSpeed: 3,
             velX: 0,
             drag: 0.95,
-            ammo: 3
+            ammo: 3,
+            shield: false  // Just keep the boolean, remove shieldTime and shieldDuration
         };
 
         const platforms = [];
         const bullets = [];
         const particles = [];
         const ammoPickups = [];
+        const shieldPickups = [];
         const platformWidth = 60;
         const platformHeight = 15;
         let fallSpeed = 2;
@@ -146,12 +148,40 @@
             }
         }
 
+        class ShieldPickup {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 10;
+                this.active = true;
+                this.pulseTime = 0;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(0, -cameraY);
+                this.pulseTime += 0.05;
+                const pulse = Math.sin(this.pulseTime) * 0.2 + 1;
+                ctx.translate(this.x, this.y);
+                ctx.scale(pulse, pulse);
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'silver';
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
         function createPlatform() {
-            const minSpacing = 120 - (difficulty * 5);
-            const maxSpacing = 200 - (difficulty * 8);
+            // Using continuous difficulty level
+            const minSpacing = 170 - (difficulty * 10);
+            const maxSpacing = 250 - (difficulty * 15);
             const baseSpacing = Math.random() * (maxSpacing - minSpacing) + minSpacing;
 
-            const numPlatforms = Math.min(Math.floor(Math.random() * difficulty) + 1, 3);
+            const numPlatforms = Math.min(Math.floor(1 + difficulty / 2), 3);
 
             for (let i = 0; i < numPlatforms; i++) {
                 const verticalOffset = Math.random() * 60 - 30;
@@ -171,18 +201,22 @@
                 });
 
                 if (validPosition) {
+                    // 15% chance for a strong platform (requiring 2 hits)
+                    const isStrong = Math.random() < 0.15;
                     // 30% chance for a moving platform
                     const isMoving = Math.random() < 0.3;
+
                     platforms.push({
                         x: x,
                         y: newY,
                         width: platformWidth,
-                        height: platformHeight,
-                        health: 1,
+                        height: isStrong ? platformHeight + 5 : platformHeight,
+                        health: isStrong ? 2 : 1,
                         isMoving: isMoving,
                         moveSpeed: isMoving ? 2 : 0,
                         moveDirection: 1,
-                        originalX: x
+                        originalX: x,
+                        isStrong: isStrong
                     });
 
                     lastPlatformY = Math.max(lastPlatformY || 0, newY);
@@ -196,6 +230,12 @@
             ammoPickups.push(new AmmoPickup(x, y));
         }
 
+        function createShieldPickup() {
+            const x = Math.random() * (canvas.width - 20) + 10;
+            const y = cameraY + canvas.height + Math.random() * 200;
+            shieldPickups.push(new ShieldPickup(x, y));
+        }
+
         function createExplosion(x, y, color) {
             for (let i = 0; i < 15; i++) {
                 particles.push(new Particle(x, y, color));
@@ -204,6 +244,21 @@
 
         function drawPlayer() {
             ctx.save();
+
+            // Draw shield if active
+            if (player.shield) {
+                ctx.translate(player.x + player.width / 2, player.y - cameraY + player.height / 2);
+                ctx.beginPath();
+                ctx.arc(0, 0, player.width * 0.8, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.restore();
+                ctx.save();
+            }
+
             ctx.translate(player.x + player.width / 2, player.y - cameraY + player.height / 2);
             const rotationAngle = -player.velX * 0.1;
             ctx.rotate(rotationAngle);
@@ -231,7 +286,10 @@
             platforms.forEach(platform => {
                 ctx.save();
                 ctx.translate(0, -cameraY);
-                ctx.fillStyle = platform.isMoving ? '#ff4d4d' : '#ffd700';
+                ctx.fillStyle =
+                    platform.isStrong ? '#4a90e2' :
+                    platform.isMoving ? '#ff4d4d' :
+                    '#ffd700';
                 ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
                 ctx.restore();
 
@@ -248,16 +306,20 @@
         function drawUI() {
             ctx.fillStyle = '#fff';
             ctx.font = '20px Arial';
-            ctx.fillText(`Ammo: ${player.ammo}`, 10, 90);
-            ctx.fillText(`Score: ${score}`, 10, 30);
-            ctx.fillText(`Difficulty: ${difficulty}`, 10, 60);
+            ctx.fillText(`Ammo: ${player.ammo}`, 10, 30);
+            ctx.fillText(`Score: ${score}`, 10, 60);
+
+            if (player.shield) {
+                ctx.fillText(`Shield: Active`, 10, 90);
+            }
         }
 
         function updateGame() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            difficulty = 1 + Math.floor(score / 500); // Faster difficulty increase
-            fallSpeed = 2 + (difficulty * 0.5); // Faster fall speed increase
+            // Continuous difficulty increase
+            difficulty = 1 + (score / 500);
+            fallSpeed = 2 + (difficulty * 0.25);
 
             if (leftPressed) player.velX -= player.speed;
             if (rightPressed) player.velX += player.speed;
@@ -292,13 +354,17 @@
 
                         createExplosion(bullet.x, bullet.y, '#ffd700');
                         bullets.splice(bulletIndex, 1);
-                        createExplosion(
-                            platform.x + platform.width/2,
-                            platform.y + platform.height/2,
-                            '#ffd700'
-                        );
-                        platforms.splice(platformIndex, 1);
-                        score += 50;
+
+                        platform.health--;
+                        if (platform.health <= 0) {
+                            createExplosion(
+                                platform.x + platform.width/2,
+                                platform.y + platform.height/2,
+                                platform.isStrong ? '#4a90e2' : '#ffd700'
+                            );
+                            platforms.splice(platformIndex, 1);
+                            score += 50;
+                        }
                     }
                 });
             });
@@ -314,6 +380,20 @@
                     pickup.active = false;
                     createExplosion(pickup.x + pickup.width/2, pickup.y + pickup.height/2, '#00ff00');
                     ammoPickups.splice(index, 1);
+                }
+            });
+
+            shieldPickups.forEach((pickup, index) => {
+                if (pickup.active &&
+                    player.x < pickup.x + pickup.radius &&
+                    player.x + player.width > pickup.x - pickup.radius &&
+                    player.y < pickup.y + pickup.radius &&
+                    player.y + player.height > pickup.y - pickup.radius) {
+
+                    player.shield = true; // Just set shield to true, no timer needed
+                    pickup.active = false;
+                    createExplosion(pickup.x, pickup.y, 'silver');
+                    shieldPickups.splice(index, 1);
                 }
             });
 
@@ -333,18 +413,30 @@
                 }
             });
 
-            const minPlatforms = 3 + difficulty;
+            shieldPickups.forEach((pickup, index) => {
+                if (pickup.y - cameraY + pickup.radius < 0) {
+                    shieldPickups.splice(index, 1);
+                }
+            });
+
+            const minPlatforms = 3 + Math.floor(difficulty);
             if (platforms.length < minPlatforms) createPlatform();
 
             // Randomly spawn ammo pickups
-            if (Math.random() < 0.01 + (difficulty * 0.002)) {
+            if (Math.random() < 0.005 + (difficulty * 0.001)) {
                 createAmmoPickup();
+            }
+
+            // Randomly spawn shield pickups (rarer than ammo)
+            if (Math.random() < 0.002 + (difficulty * 0.0005)) {
+                createShieldPickup();
             }
 
             score = Math.floor(cameraY / 10);
 
             drawPlatforms();
             ammoPickups.forEach(pickup => pickup.draw());
+            shieldPickups.forEach(pickup => pickup.draw());
             bullets.forEach(bullet => bullet.draw());
             particles.forEach(particle => particle.draw());
             drawPlayer();
@@ -354,21 +446,29 @@
                 gameOver();
             }
 
-            let collision = false;
-            platforms.forEach(platform => {
+            let collision = checkCollision();
+            if (collision) {
+                if (player.shield) {
+                    player.shield = false;
+                    createExplosion(player.x + player.width/2, player.y + player.height/2, 'silver');
+                } else {
+                    gameOver();
+                }
+            }
+
+            player.y += fallSpeed;
+        }
+
+        function checkCollision() {
+            for (let platform of platforms) {
                 if (player.y + player.height > platform.y &&
                     player.y < platform.y + platform.height &&
                     player.x < platform.x + platform.width &&
                     player.x + player.width > platform.x) {
-                    collision = true;
+                    return true;
                 }
-            });
-
-            if (collision) {
-                gameOver();
             }
-
-            player.y += fallSpeed;
+            return false;
         }
 
         function gameOver() {
@@ -390,10 +490,12 @@
             player.y = canvas.height / 2;
             player.velX = 0;
             player.ammo = 3;
+            player.shield = false;  // Reset shield status
             platforms.length = 0;
             bullets.length = 0;
             particles.length = 0;
             ammoPickups.length = 0;
+            shieldPickups.length = 0;
             score = 0;
             cameraY = 0;
             lastPlatformY = 0;

@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sky Fall: Reverse Platformer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(to bottom, #ff9966, #ff5e62);
+            font-family: Arial, sans-serif;
+        }
+        #gameCanvas {
+            border: 4px solid #fff;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            width: 30,
+            height: 30,
+            speed: 0.5,
+            maxSpeed: 3,
+            velX: 0,
+            drag: 0.95,
+            ammo: 100,
+            shield: false,
+            invulnerable: false,
+            invulnerableTimer: 0,
+            boosting: false,
+            boostTimer: 0,
+            boostSpeed: 8, // Boost speed multiplier
+            boostDuration: 3000 // 3 seconds in ms
+        };
+
+        // Combo system variables
+        const combo = {
+            count: 0,
+            multiplier: 1,
+            timer: 0,
+            duration: 2000, // 2 seconds to maintain combo
+            lastDestroyedTime: 0
+        };
+
+        const platforms = [];
+        const bullets = [];
+        const particles = [];
+        const ammoPickups = [];
+        const shieldPickups = [];
+        const rocketPickups = [];
+        const platformWidth = 60;
+        const platformHeight = 15;
+        let fallSpeed = 2;
+        let cameraY = 0;
+        let lastPlatformY = 0;
+        let difficulty = 1;
+
+        let gameLoop;
+        let gameStarted = false;
+        let score = 0;
+        let leftPressed = false;
+        let rightPressed = false;
+        let comboTextAlpha = 0;
+        let comboTextScale = 1;
+        let screenShakeAmount = 0;
+
+        class Bullet {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.velY = 10;
+                this.radius = 4;
+                this.active = true;
+            }
+
+            update() {
+                this.y += this.velY;
+                if (this.y > cameraY + canvas.height) {
+                    this.active = false;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(0, -cameraY);
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y - this.velY * 3);
+                ctx.lineTo(this.x, this.y);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.velX = (Math.random() - 0.5) * 8;
+                this.velY = (Math.random() - 0.5) * 8;
+                this.size = Math.random() * 4 + 2;
+                this.color = color;
+                this.life = 1;
+                this.decay = Math.random() * 0.02 + 0.02;
+            }
+
+            update() {
+                this.x += this.velX;
+                this.y += this.velY;
+                this.velX *= 0.98;
+                this.velY *= 0.98;
+                this.life -= this.decay;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(0, -cameraY);
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size, this.size);
+                ctx.restore();
+            }
+        }
+
+        class AmmoPickup {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 15;
+                this.height = 15;
+                this.active = true;
+                this.pulseTime = 0;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(0, -cameraY);
+                this.pulseTime += 0.05;
+                const pulse = Math.sin(this.pulseTime) * 0.2 + 1;
+                ctx.translate(this.x + this.width/2, this.y + this.height/2);
+                ctx.scale(pulse, pulse);
+                ctx.fillStyle = '#00ff00';
+                ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-this.width/2, -this.height/2, this.width, this.height);
+                ctx.restore();
+            }
+        }
+
+        class ShieldPickup {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 10;
+                this.active = true;
+                this.pulseTime = 0;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(0, -cameraY);
+                this.pulseTime += 0.05;
+                const pulse = Math.sin(this.pulseTime) * 0.2 + 1;
+                ctx.translate(this.x, this.y);
+                ctx.scale(pulse, pulse);
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'silver';
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        class RocketPickup {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 15;
+                this.height = 25;
+                this.active = true;
+                this.pulseTime = 0;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(0, -cameraY);
+                this.pulseTime += 0.05;
+                const pulse = Math.sin(this.pulseTime) * 0.2 + 1;
+                ctx.translate(this.x + this.width/2, this.y + this.height/2);
+                ctx.scale(pulse, pulse);
+
+                // Draw rocket shape (triangle pointing down)
+                ctx.fillStyle = '#ff9500'; // Orange/rocket color
+                ctx.beginPath();
+                ctx.moveTo(0, this.height/2);
+                ctx.lineTo(-this.width/2, -this.height/2);
+                ctx.lineTo(this.width/2, -this.height/2);
+                ctx.closePath();
+                ctx.fill();
+
+                // Add flame effect
+                ctx.fillStyle = '#ff3300';
+                ctx.beginPath();
+                ctx.moveTo(-this.width/4, -this.height/2);
+                ctx.lineTo(this.width/4, -this.height/2);
+                ctx.lineTo(0, -this.height/2 - Math.sin(Date.now() * 0.01) * 5 - 5);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        function createPlatform() {
+            // Using continuous difficulty level
+            const minSpacing = 170 - (difficulty * 10);
+            const maxSpacing = 250 - (difficulty * 15);
+            const baseSpacing = Math.random() * (maxSpacing - minSpacing) + minSpacing;
+
+            const numPlatforms = Math.min(Math.floor(1 + difficulty / 2), 3);
+
+            for (let i = 0; i < numPlatforms; i++) {
+                const verticalOffset = Math.random() * 60 - 30;
+                const newY = (lastPlatformY ? Math.max(lastPlatformY + baseSpacing, cameraY + canvas.height) : cameraY + canvas.height) + verticalOffset;
+
+                const minX = 0;
+                const maxX = canvas.width - platformWidth;
+                const x = Math.random() * (maxX - minX) + minX;
+
+                let validPosition = true;
+                platforms.forEach(platform => {
+                    if (Math.abs(platform.y - newY) < 50) {
+                        if (x < platform.x + platformWidth + 20 && x + platformWidth + 20 > platform.x) {
+                            validPosition = false;
+                        }
+                    }
+                });
+
+                if (validPosition) {
+                    // 15% chance for a strong platform (requiring 2 hits)
+                    const isStrong = Math.random() < 0.15;
+                    // 30% chance for a moving platform
+                    const isMoving = Math.random() < 0.3;
+
+                    platforms.push({
+                        x: x,
+                        y: newY,
+                        width: platformWidth,
+                        height: isStrong ? platformHeight + 5 : platformHeight,
+                        health: isStrong ? 2 : 1,
+                        isMoving: isMoving,
+                        moveSpeed: isMoving ? 2 : 0,
+                        moveDirection: 1,
+                        originalX: x,
+                        isStrong: isStrong
+                    });
+
+                    lastPlatformY = Math.max(lastPlatformY || 0, newY);
+                }
+            }
+        }
+
+        function increaseCombo() {
+            const now = Date.now();
+            if (now - combo.lastDestroyedTime < combo.duration) {
+                combo.count++;
+                combo.multiplier = 1 + (combo.count * 0.5);  // 1.5x, 2x, 2.5x, etc.
+            } else {
+                combo.count = 1;
+                combo.multiplier = 1.5;
+            }
+            combo.lastDestroyedTime = now;
+            combo.timer = now + combo.duration;
+
+            // Visual feedback
+            comboTextAlpha = 1;
+            comboTextScale = 1.5;
+
+            // Screen shake for high combos
+            if (combo.count >= 3) {
+                screenShakeAmount = Math.min(combo.count * 2, 15);
+            }
+
+            // Spawn rewards based on combo level
+            if (combo.count === 3) {
+                // Guaranteed ammo at combo 3
+                const x = Math.random() * (canvas.width - 15);
+                const y = Math.min(player.y + 100, cameraY + canvas.height);
+                ammoPickups.push(new AmmoPickup(x, y));
+            } else if (combo.count === 5) {
+                // Guaranteed shield at combo 5
+                const x = Math.random() * (canvas.width - 20) + 10;
+                const y = Math.min(player.y + 100, cameraY + canvas.height);
+                shieldPickups.push(new ShieldPickup(x, y));
+            } else if (combo.count === 7) {
+                // Guaranteed rocket at combo 7
+                const x = Math.random() * (canvas.width - 15);
+                const y = Math.min(player.y + 100, cameraY + canvas.height);
+                rocketPickups.push(new RocketPickup(x, y));
+            }
+        }
+
+        function createAmmoPickup() {
+            const x = Math.random() * (canvas.width - 15);
+            const y = cameraY + canvas.height + Math.random() * 200;
+            ammoPickups.push(new AmmoPickup(x, y));
+        }
+
+        function createShieldPickup() {
+            const x = Math.random() * (canvas.width - 20) + 10;
+            const y = cameraY + canvas.height + Math.random() * 200;
+            shieldPickups.push(new ShieldPickup(x, y));
+        }
+
+        function createRocketPickup() {
+            const x = Math.random() * (canvas.width - 15);
+            const y = cameraY + canvas.height + Math.random() * 200;
+            rocketPickups.push(new RocketPickup(x, y));
+        }
+
+        function createExplosion(x, y, color) {
+            const particleCount = Math.min(15 + combo.count * 3, 30);
+            for (let i = 0; i < particleCount; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function drawComboCounter() {
+            if (combo.count > 1 && comboTextAlpha > 0) {
+                ctx.save();
+
+                // Apply screen shake if active
+                if (screenShakeAmount > 0) {
+                    const shakeX = (Math.random() - 0.5) * screenShakeAmount;
+                    const shakeY = (Math.random() - 0.5) * screenShakeAmount;
+                    ctx.translate(shakeX, shakeY);
+                }
+
+                ctx.globalAlpha = comboTextAlpha;
+                ctx.font = `${Math.floor(30 * comboTextScale)}px Arial`;
+                ctx.textAlign = 'center';
+
+                // Generate combo color based on combo count
+                const hue = 60 + Math.min(combo.count * 20, 300);
+                ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
+
+                const text = `${combo.count}x COMBO!`;
+                ctx.fillText(text, canvas.width / 2, canvas.height / 3);
+
+                // Draw outline
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'white';
+                ctx.strokeText(text, canvas.width / 2, canvas.height / 3);
+
+                ctx.restore();
+            }
+        }
+
+        function drawComboBar() {
+            if (combo.count > 0) {
+                const now = Date.now();
+                const remaining = Math.max(0, (combo.timer - now) / combo.duration);
+
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.fillRect(20, 15, canvas.width - 40, 10);
+
+                // Generate gradient based on combo count
+                const hue = 60 + Math.min(combo.count * 20, 300);
+                const gradient = ctx.createLinearGradient(20, 15, canvas.width - 40, 15);
+                gradient.addColorStop(0, `hsl(${hue}, 100%, 40%)`);
+                gradient.addColorStop(1, `hsl(${hue}, 100%, 60%)`);
+
+                ctx.fillStyle = gradient;
+                ctx.fillRect(20, 15, (canvas.width - 40) * remaining, 10);
+            }
+        }
+
+        function drawPlayer() {
+            ctx.save();
+
+            // Draw shield if active
+            if (player.shield) {
+                ctx.translate(player.x + player.width / 2, player.y - cameraY + player.height / 2);
+                ctx.beginPath();
+                ctx.arc(0, 0, player.width * 0.8, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.restore();
+                ctx.save();
+            }
+
+            ctx.translate(player.x + player.width / 2, player.y - cameraY + player.height / 2);
+            const rotationAngle = -player.velX * 0.1;
+            ctx.rotate(rotationAngle);
+
+            // Draw rocket flame if boosting
+            if (player.boosting) {
+                ctx.fillStyle = '#ff3300';
+                ctx.beginPath();
+                ctx.moveTo(-player.width * 0.3, player.height / 2);
+                ctx.lineTo(player.width * 0.3, player.height / 2);
+                const flameHeight = Math.sin(Date.now() * 0.01) * 10 + 20;
+                ctx.lineTo(0, player.height / 2 + flameHeight);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Draw player body
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(-player.width / 2, -player.height / 2, player.width, player.height);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            for (let i = 1; i <= 3; i++) {
+                const yOffset = -player.height / 2 - i * 6;
+                const width = player.width - i * 4;
+                ctx.beginPath();
+                ctx.moveTo(-width / 2, yOffset);
+                ctx.quadraticCurveTo(
+                    0,
+                    yOffset - Math.sin(Date.now() * 0.005 + i) * 3,
+                    width / 2,
+                    yOffset
+                );
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function drawPlatforms() {
+            platforms.forEach(platform => {
+                ctx.save();
+                ctx.translate(0, -cameraY);
+                // Flash platforms during high combo
+                if (combo.count >= 5 && Math.random() < 0.2) {
+                    const hue = 60 + Math.min(combo.count * 20, 300);
+                    ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
+                } else {
+                    ctx.fillStyle =
+                        platform.isStrong ? '#4a90e2' :
+                        platform.isMoving ? '#ff4d4d' :
+                        '#ffd700';
+                }
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                ctx.restore();
+
+                if (platform.isMoving) {
+                    platform.x += platform.moveSpeed * platform.moveDirection;
+
+                    if (platform.x > canvas.width - platform.width || platform.x < 0) {
+                        platform.moveDirection *= -1;
+                    }
+                }
+            });
+        }
+
+        function drawUI() {
+            ctx.fillStyle = '#fff';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(`Ammo: ${player.ammo}`, 10, 50);
+            ctx.fillText(`Score: ${score}`, 10, 80);
+
+            let yPosition = 110;
+            if (player.shield) {
+                ctx.fillText(`Shield: Active`, 10, yPosition);
+                yPosition += 30;
+            }
+
+            if (player.boosting) {
+                const remainingTime = Math.ceil((player.boostTimer - Date.now()) / 1000);
+                ctx.fillText(`Boost: ${remainingTime}s`, 10, yPosition);
+            }
+
+            if (combo.count > 1) {
+                ctx.fillStyle = `hsl(${60 + Math.min(combo.count * 20, 300)}, 100%, 60%)`;
+                ctx.fillText(`Combo: ${combo.count}x`, canvas.width - 120, 50);
+                ctx.fillText(`Multiplier: ${combo.multiplier.toFixed(1)}x`, canvas.width - 160, 80);
+            }
+        }
+
+        function updateGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Decrease screen shake
+            if (screenShakeAmount > 0) {
+                screenShakeAmount *= 0.9;
+                if (screenShakeAmount < 0.5) screenShakeAmount = 0;
+            }
+
+            // Combo text animation
+            if (comboTextAlpha > 0) {
+                comboTextAlpha -= 0.02;
+                comboTextScale -= 0.01;
+                if (comboTextScale < 1) comboTextScale = 1;
+            }
+
+            // Reset combo if timer has expired
+            if (combo.count > 0 && Date.now() > combo.timer) {
+                combo.count = 0;
+                combo.multiplier = 1;
+            }
+
+            // Continuous difficulty increase
+            difficulty = 1 + (score / 500);
+            let currentFallSpeed = fallSpeed + (difficulty * 0.25);
+
+            // Update boost timer
+            if (player.boosting && Date.now() > player.boostTimer) {
+                player.boosting = false;
+            }
+
+            // Make player invulnerable while boosting
+            if (player.boosting) {
+                player.invulnerable = true;
+            } else if (player.invulnerable && Date.now() > player.invulnerableTimer) {
+                player.invulnerable = false;
+            }
+
+            if (leftPressed) player.velX -= player.speed;
+            if (rightPressed) player.velX += player.speed;
+
+            player.velX = Math.max(Math.min(player.velX, player.maxSpeed), -player.maxSpeed);
+            player.x += player.velX;
+            player.velX *= player.drag;
+
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+
+            bullets.forEach((bullet, index) => {
+                bullet.update();
+                if (!bullet.active) {
+                    bullets.splice(index, 1);
+                }
+            });
+
+            particles.forEach((particle, index) => {
+                particle.update();
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+
+            // Special combo effect - colored background when combo is high
+            if (combo.count >= 5) {
+                const hue = 60 + Math.min(combo.count * 20, 300);
+                ctx.fillStyle = `hsla(${hue}, 70%, 50%, 0.1)`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            drawComboBar();
+
+            bullets.forEach((bullet, bulletIndex) => {
+                platforms.forEach((platform, platformIndex) => {
+                    if (bullet.x > platform.x &&
+                        bullet.x < platform.x + platform.width &&
+                        bullet.y > platform.y &&
+                        bullet.y < platform.y + platform.height) {
+
+                        createExplosion(bullet.x, bullet.y, '#ffd700');
+                        bullets.splice(bulletIndex, 1);
+
+                        platform.health--;
+                        if (platform.health <= 0) {
+                            const basePoints = 50;
+                            const comboPoints = Math.floor(basePoints * combo.multiplier);
+                            score += comboPoints;
+
+                            // Create number indicator
+                            createPointsIndicator(
+                                platform.x + platform.width/2,
+                                platform.y,
+                                `+${comboPoints}`
+                            );
+
+                            createExplosion(
+                                platform.x + platform.width/2,
+                                platform.y + platform.height/2,
+                                platform.isStrong ? '#4a90e2' : '#ffd700'
+                            );
+
+                            platforms.splice(platformIndex, 1);
+
+                            // Increase combo
+                            increaseCombo();
+                        }
+                    }
+                });
+            });
+
+            ammoPickups.forEach((pickup, index) => {
+                if (pickup.active &&
+                    player.x < pickup.x + pickup.width &&
+                    player.x + player.width > pickup.x &&
+                    player.y < pickup.y + pickup.height &&
+                    player.y + player.height > pickup.y) {
+
+                    player.ammo++;
+                    pickup.active = false;
+                    createExplosion(pickup.x + pickup.width/2, pickup.y + pickup.height/2, '#00ff00');
+                    ammoPickups.splice(index, 1);
+                }
+            });
+
+            shieldPickups.forEach((pickup, index) => {
+                if (pickup.active &&
+                    player.x < pickup.x + pickup.radius &&
+                    player.x + player.width > pickup.x - pickup.radius &&
+                    player.y < pickup.y + pickup.radius &&
+                    player.y + player.height > pickup.y - pickup.radius) {
+
+                    player.shield = true;
+                    pickup.active = false;
+                    createExplosion(pickup.x, pickup.y, 'silver');
+                    shieldPickups.splice(index, 1);
+                }
+            });
+
+            rocketPickups.forEach((pickup, index) => {
+                if (pickup.active &&
+                    player.x < pickup.x + pickup.width &&
+                    player.x + player.width > pickup.x &&
+                    player.y < pickup.y + pickup.height &&
+                    player.y + player.height > pickup.y) {
+
+                    player.boosting = true;
+                    player.boostTimer = Date.now() + player.boostDuration;
+                    pickup.active = false;
+                    createExplosion(pickup.x + pickup.width/2, pickup.y + pickup.height/2, '#ff9500');
+                    rocketPickups.splice(index, 1);
+                }
+            });
+
+            // Apply boost effect to fall speed
+            if (player.boosting) {
+                currentFallSpeed += player.boostSpeed;
+
+                // Add boost particles
+                if (Math.random() < 0.3) {
+                    particles.push(new Particle(
+                        player.x + player.width/2 + (Math.random()-0.5) * 10,
+                        player.y + player.height,
+                        Math.random() < 0.3 ? '#ff3300' : '#ff9500'
+                    ));
+                }
+            }
+
+            cameraY += currentFallSpeed;
+            const targetCameraY = player.y - canvas.height / 2;
+            cameraY = cameraY * 0.95 + targetCameraY * 0.05;
+
+            platforms.forEach((platform, index) => {
+                if (platform.y - cameraY + platform.height < 0) {
+                    platforms.splice(index, 1);
+                }
+            });
+
+            ammoPickups.forEach((pickup, index) => {
+                if (pickup.y - cameraY + pickup.height < 0) {
+                    ammoPickups.splice(index, 1);
+                }
+            });
+
+            shieldPickups.forEach((pickup, index) => {
+                if (pickup.y - cameraY + pickup.radius < 0) {
+                    shieldPickups.splice(index, 1);
+                }
+            });
+
+            rocketPickups.forEach((pickup, index) => {
+                if (pickup.y - cameraY + pickup.height < 0) {
+                    rocketPickups.splice(index, 1);
+                }
+            });
+
+            // Points indicators
+            pointsIndicators.forEach((indicator, index) => {
+                indicator.update();
+                if (indicator.alpha <= 0) {
+                    pointsIndicators.splice(index, 1);
+                }
+            });
+
+            const minPlatforms = 3 + Math.floor(difficulty);
+            if (platforms.length < minPlatforms) createPlatform();
+
+            // Randomly spawn ammo pickups
+            if (Math.random() < 0.005 + (difficulty * 0.001)) {
+                createAmmoPickup();
+            }
+
+            // Randomly spawn shield pickups (rarer than ammo)
+            if (Math.random() < 0.002 + (difficulty * 0.0005)) {
+                createShieldPickup();
+            }
+
+            // Randomly spawn rocket pickups (rarest of all)
+            if (Math.random() < 0.001 + (difficulty * 0.0003)) {
+                createRocketPickup();
+            }
+
+            score = Math.floor(cameraY / 10);
+
+            // Draw boost trail if boosting
+            if (player.boosting) {
+                ctx.save();
+                ctx.translate(0, -cameraY);
+
+                // Draw flame trail
+                ctx.beginPath();
+                const trailLength = 80 + Math.sin(Date.now() * 0.01) * 20;
+                const gradient = ctx.createLinearGradient(
+                    player.x + player.width/2,
+                    player.y - trailLength,
+                    player.x + player.width/2,
+                    player.y
+                );
+                gradient.addColorStop(0, 'rgba(255, 165, 0, 0)');
+                gradient.addColorStop(1, 'rgba(255, 69, 0, 0.7)');
+                ctx.fillStyle = gradient;
+
+                ctx.moveTo(player.x, player.y);
+                ctx.lineTo(player.x + player.width, player.y);
+                ctx.lineTo(player.x + player.width/2, player.y - trailLength);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            drawPlatforms();
+            ammoPickups.forEach(pickup => pickup.draw());
+            shieldPickups.forEach(pickup => pickup.draw());
+            rocketPickups.forEach(pickup => pickup.draw());
+            bullets.forEach(bullet => bullet.draw());
+            particles.forEach(particle => particle.draw());
+            drawPlayer();
+            drawComboCounter();
+            drawPointsIndicators();
+            drawUI();
+
+            if (player.y < cameraY - player.height) {
+                gameOver();
+            }
+
+            let collision = checkCollision();
+            if (collision) {
+                if (player.shield) {
+                    player.shield = false;
+                    player.invulnerable = true;
+                    player.invulnerableTimer = Date.now() + 500; // 0.5 second invulnerability
+                    createExplosion(player.x + player.width/2, player.y + player.height/2, 'silver');
+                } else {
+                    gameOver();
+                }
+            }
+
+            player.y += currentFallSpeed;
+        }
+
+        const pointsIndicators = [];
+
+        class PointsIndicator {
+            constructor(x, y, text) {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.alpha = 1;
+                this.scale = 1.5;
+                this.velY = -2;
+            }
+
+            update()  {
+                this.y += this.velY;
+                this.alpha -= 0.02;
+                this.scale -= 0.01;
+                if (this.scale < 1) this.scale = 1;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(0, -cameraY);
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = '#ffffff';
+                ctx.font = `${Math.floor(20 * this.scale)}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        function createPointsIndicator(x, y, text) {
+            pointsIndicators.push(new PointsIndicator(x, y, text));
+        }
+
+        function drawPointsIndicators() {
+            pointsIndicators.forEach(indicator => indicator.draw());
+        }
+
+        function checkCollision() {
+            // Player is invincible during boost or temporary invulnerability
+            if (player.invulnerable || player.boosting) {
+                return false;
+            }
+
+            for (let platform of platforms) {
+                if (player.y + player.height > platform.y &&
+                    player.y < platform.y + platform.height &&
+                    player.x < platform.x + platform.width &&
+                    player.x + player.width > platform.x) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function gameOver() {
+            cancelAnimationFrame(gameLoop);
+            gameStarted = false;
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#fff';
+            ctx.font = '30px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Game Over!', canvas.width / 2, canvas.height / 2 - 40);
+            ctx.font = '20px Arial';
+            ctx.fillText(`Score: ${Math.floor(score)}`, canvas.width / 2, canvas.height / 2);
+            ctx.fillText(`Max Combo: ${combo.count}x`, canvas.width / 2, canvas.height / 2 + 30);
+            ctx.fillText('Click to restart', canvas.width / 2, canvas.height / 2 + 80);
+        }
+
+        function startGame() {
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            player.velX = 0;
+            player.ammo = 100;
+            player.shield = false;
+            player.invulnerable = false;
+            player.boosting = false;
+            player.boostTimer = 0;
+            platforms.length = 0;
+            bullets.length = 0;
+            particles.length = 0;
+            ammoPickups.length = 0;
+            shieldPickups.length = 0;
+            rocketPickups.length = 0;
+            pointsIndicators.length = 0;
+            combo.count = 0;
+            combo.multiplier = 1;
+            combo.lastDestroyedTime = 0;
+            screenShakeAmount = 0;
+            score = 0;
+            cameraY = 0;
+            lastPlatformY = 0;
+            difficulty = 1;
+            gameStarted = true;
+            gameLoop = requestAnimationFrame(update);
+        }
+
+        function update() {
+            if (gameStarted) {
+                updateGame();
+                gameLoop = requestAnimationFrame(update);
+            }
+        }
+
+        function shoot() {
+            if (player.ammo > 0) {
+                bullets.push(new Bullet(
+                    player.x + player.width / 2,
+                    player.y + player.height
+                ));
+                player.ammo--;
+                createExplosion(player.x + player.width / 2, player.y + player.height, '#fff');
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') leftPressed = true;
+            if (e.key === 'ArrowRight') rightPressed = true;
+            if (e.key === ' ') shoot();
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft') leftPressed = false;
+            if (e.key === 'ArrowRight') rightPressed = false;
+        });
+
+        canvas.addEventListener('click', () => {
+            if (!gameStarted) startGame();
+        });
+
+        // Draw initial screen
+        ctx.fillStyle = '#fff';
+        ctx.font = '30px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Sky Fall', canvas.width / 2, canvas.height / 2 - 20);
+        ctx.font = '20px Arial';
+        ctx.fillText('Click to start', canvas.width / 2, canvas.height / 2 + 20);
+    </script>
+</body>
+</html>
