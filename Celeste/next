@@ -1,0 +1,6 @@
+Model a
+- Issue when running:
+
+line 24, in draw
+    x = pygame.math.Vector2(pygame.math.Vector2(800, 600)).elementwise() * pygame.math.Vector2(pygame.random.random(), pygame.random.random())
+AttributeError: module 'pygame' has no attribute 'random'

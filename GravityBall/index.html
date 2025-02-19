@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tilting Space Maze</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #0a0a2a;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+        #gameContainer {
+            position: relative;
+            transition: transform 0.1s ease-out;
+        }
+        #gameCanvas {
+            border: 4px solid #4a4a8a;
+            box-shadow: 0 0 40px rgba(100, 149, 237, 0.3);
+            background-color: rgba(0, 0, 20, 0.9);
+        }
+        #instructions {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #8f8ff1;
+            background-color: rgba(0, 0, 40, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #4a4a8a;
+            box-shadow: 0 0 20px rgba(100, 149, 237, 0.2);
+        }
+        .star {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="800"></canvas>
+    </div>
+    <div id="instructions">
+        Use arrow keys to tilt the maze<br>
+        Guide the ball to the portal at the top
+    </div>
+
+    <script>
+        // Create starry background
+        for (let i = 0; i < 100; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.width = Math.random() * 3 + 'px';
+            star.style.height = star.style.width;
+            star.style.left = Math.random() * 100 + 'vw';
+            star.style.top = Math.random() * 100 + 'vh';
+            star.style.opacity = Math.random();
+            document.body.appendChild(star);
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameContainer = document.getElementById('gameContainer');
+
+        const CELL_SIZE = 40;
+        const GRID_SIZE = 20;
+        const WALL_COLOR = '#4a4a8a';
+        const SAFE_ZONE_SIZE = 2;
+
+        class Cell {
+            constructor(row, col) {
+                this.row = row;
+                this.col = col;
+                this.walls = { top: true, right: true, bottom: true, left: true };
+                this.visited = false;
+            }
+        }
+
+        let maze = [];
+        let ball = {
+            x: canvas.width / 2,
+            y: canvas.height - CELL_SIZE * 1.5,
+            radius: 15,
+            velocity: { x: 0, y: 0 }
+        };
+
+        const tilt = { x: 0, y: 0 };
+        const maxTiltAngle = 5; // Maximum tilt in degrees
+        const tiltSensitivity = 0.5; // How responsive the tilt is to key presses
+        const friction = 0.98;
+
+        function initMaze() {
+            for (let row = 0; row < GRID_SIZE; row++) {
+                maze[row] = [];
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    maze[row][col] = new Cell(row, col);
+                }
+            }
+
+            // Clear start and end zones
+            const clearZone = (startRow, endRow) => {
+                for (let row = startRow; row < endRow; row++) {
+                    for (let col = 0; col < GRID_SIZE; col++) {
+                        maze[row][col].walls = { top: false, right: false, bottom: false, left: false };
+                    }
+                }
+            };
+
+            clearZone(0, SAFE_ZONE_SIZE); // Top (end) zone
+            clearZone(GRID_SIZE - SAFE_ZONE_SIZE, GRID_SIZE); // Bottom (start) zone
+
+            function generateMaze(row, col) {
+                maze[row][col].visited = true;
+                const directions = [
+                    [0, -1, 'left', 'right'],
+                    [0, 1, 'right', 'left'],
+                    [-1, 0, 'top', 'bottom'],
+                    [1, 0, 'bottom', 'top']
+                ];
+
+                for (let i = directions.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [directions[i], directions[j]] = [directions[j], directions[i]];
+                }
+
+                for (const [dx, dy, wall1, wall2] of directions) {
+                    const newRow = row + dx;
+                    const newCol = col + dy;
+
+                    if (newRow >= SAFE_ZONE_SIZE &&
+                        newRow < GRID_SIZE - SAFE_ZONE_SIZE &&
+                        newCol >= 0 &&
+                        newCol < GRID_SIZE &&
+                        !maze[newRow][newCol].visited) {
+                        maze[row][col].walls[wall1] = false;
+                        maze[newRow][newCol].walls[wall2] = false;
+                        generateMaze(newRow, newCol);
+                    }
+                }
+            }
+
+            generateMaze(SAFE_ZONE_SIZE, Math.floor(GRID_SIZE / 2));
+        }
+
+        function drawMaze() {
+            ctx.strokeStyle = WALL_COLOR;
+            ctx.lineWidth = 2;
+
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    const cell = maze[row][col];
+                    const x = col * CELL_SIZE;
+                    const y = row * CELL_SIZE;
+
+                    if (cell.walls.top) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x + CELL_SIZE, y);
+                        ctx.stroke();
+                    }
+                    if (cell.walls.right) {
+                        ctx.beginPath();
+                        ctx.moveTo(x + CELL_SIZE, y);
+                        ctx.lineTo(x + CELL_SIZE, y + CELL_SIZE);
+                        ctx.stroke();
+                    }
+                    if (cell.walls.bottom) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, y + CELL_SIZE);
+                        ctx.lineTo(x + CELL_SIZE, y + CELL_SIZE);
+                        ctx.stroke();
+                    }
+                    if (cell.walls.left) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x, y + CELL_SIZE);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Subtle indicator for start zone
+            const startGradient = ctx.createLinearGradient(0, canvas.height - CELL_SIZE * SAFE_ZONE_SIZE, 0, canvas.height);
+            startGradient.addColorStop(0, 'rgba(100, 149, 237, 0)');
+            startGradient.addColorStop(1, 'rgba(100, 149, 237, 0.1)');
+            ctx.fillStyle = startGradient;
+            ctx.fillRect(0, canvas.height - CELL_SIZE * SAFE_ZONE_SIZE, canvas.width, CELL_SIZE * SAFE_ZONE_SIZE);
+
+            // Subtle indicator for end zone
+            const endGradient = ctx.createLinearGradient(0, 0, 0, CELL_SIZE * SAFE_ZONE_SIZE);
+            endGradient.addColorStop(0, 'rgba(159, 73, 255, 0.1)');
+            endGradient.addColorStop(1, 'rgba(159, 73, 255, 0)');
+            ctx.fillStyle = endGradient;
+            ctx.fillRect(0, 0, canvas.width, CELL_SIZE * SAFE_ZONE_SIZE);
+        }
+
+        function drawPortal() {
+            const portalX = canvas.width / 2;
+            const portalY = CELL_SIZE;
+            const gradient = ctx.createRadialGradient(
+                portalX, portalY, 5,
+                portalX, portalY, 25
+            );
+            gradient.addColorStop(0, '#9f49ff');
+            gradient.addColorStop(1, 'rgba(159, 73, 255, 0)');
+
+            ctx.beginPath();
+            ctx.arc(portalX, portalY, 25, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+        }
+
+        function drawBall() {
+            const gradient = ctx.createRadialGradient(
+                ball.x, ball.y, 0,
+                ball.x, ball.y, ball.radius * 1.5
+            );
+            gradient.addColorStop(0, '#7f7fff');
+            gradient.addColorStop(1, 'rgba(100, 100, 255, 0)');
+
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius * 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#4f4fff';
+            ctx.fill();
+        }
+
+        function updateGameContainerTilt() {
+            const tiltX = tilt.x * maxTiltAngle;
+            const tiltY = tilt.y * maxTiltAngle;
+            // Reversed the sign of tiltX and tiltY to correct the tilt direction
+            gameContainer.style.transform = `perspective(1000px) rotateX(${-tiltY}deg) rotateY(${tiltX}deg)`;
+        }
+
+        function checkCollision(nextX, nextY) {
+            const currentCell = {
+                row: Math.floor(ball.y / CELL_SIZE),
+                col: Math.floor(ball.x / CELL_SIZE)
+            };
+
+            if (currentCell.row < 0 || currentCell.row >= GRID_SIZE ||
+                currentCell.col < 0 || currentCell.col >= GRID_SIZE) {
+                return true;
+            }
+
+            if (nextX > ball.x && maze[currentCell.row][currentCell.col].walls.right) {
+                if (nextX + ball.radius > (currentCell.col + 1) * CELL_SIZE) return true;
+            }
+            if (nextX < ball.x && maze[currentCell.row][currentCell.col].walls.left) {
+                if (nextX - ball.radius < currentCell.col * CELL_SIZE) return true;
+            }
+
+            if (nextY > ball.y && maze[currentCell.row][currentCell.col].walls.bottom) {
+                if (nextY + ball.radius > (currentCell.row + 1) * CELL_SIZE) return true;
+            }
+            if (nextY < ball.y && maze[currentCell.row][currentCell.col].walls.top) {
+                if (nextY - ball.radius < currentCell.row * CELL_SIZE) return true;
+            }
+
+            return false;
+        }
+
+        function updateBall() {
+            ball.velocity.x += tilt.x * 0.3;
+            ball.velocity.y += tilt.y * 0.3;
+
+            ball.velocity.x *= friction;
+            ball.velocity.y *= friction;
+
+            const nextX = ball.x + ball.velocity.x;
+            const nextY = ball.y + ball.velocity.y;
+
+            if (checkCollision(nextX, ball.y)) {
+                ball.velocity.x *= -0.5;
+            } else {
+                ball.x = nextX;
+            }
+
+            if (checkCollision(ball.x, nextY)) {
+                ball.velocity.y *= -0.5;
+            } else {
+                ball.y = nextY;
+            }
+
+            // Check if reached portal
+            if (ball.y < CELL_SIZE * 2 && Math.abs(ball.x - canvas.width/2) < 25) {
+                ball.x = canvas.width / 2;
+                ball.y = canvas.height - CELL_SIZE * 1.5;
+                ball.velocity = { x: 0, y: 0 };
+                initMaze();
+            }
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawMaze();
+            drawPortal();
+            updateBall();
+            drawBall();
+            updateGameContainerTilt();
+            requestAnimationFrame(gameLoop);
+        }
+
+        document.addEventListener('keydown', (event) => {
+            switch(event.key) {
+                case 'ArrowUp':
+                    tilt.y = -tiltSensitivity;
+                    break;
+                case 'ArrowDown':
+                    tilt.y = tiltSensitivity;
+                    break;
+                case 'ArrowLeft':
+                    tilt.x = -tiltSensitivity;
+                    break;
+                case 'ArrowRight':
+                    tilt.x = tiltSensitivity;
+                    break;
+            }
+        });
+
+        document.addEventListener('keyup', (event) => {
+            switch(event.key) {
+                case 'ArrowUp':
+                case 'ArrowDown':
+                    tilt.y = 0;
+                    break;
+                case 'ArrowLeft':
+                case 'ArrowRight':
+                    tilt.x = 0;
+                    break;
+            }
+        });
+
+        // Initialize and start game
+        initMaze();
+        gameLoop();
+    </script>
+</body>
+</html>

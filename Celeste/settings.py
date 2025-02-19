@@ -1,0 +1,28 @@
+import pygame
+
+# Screen settings
+SCREEN_WIDTH = 1200
+SCREEN_HEIGHT = 800
+FPS = 60
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+BLUE = (0, 0, 255)
+PURPLE = (147, 0, 211)
+PLATFORM_COLOR = (80, 60, 120)
+PLAYER_COLOR = (200, 200, 255)
+BOOST_COLOR = (255, 165, 0)  # Orange
+CLIMB_COLOR = (50, 205, 50)  # Lime Green
+
+# Physics settings
+GRAVITY = 0.8
+JUMP_SPEED = -15
+MOVE_SPEED = 5
+BOOST_SPEED = 15
+BOOST_DURATION = 10
+CLIMB_SPEED = 4
+CLIMB_TIME_LIMIT = 180  # 3 seconds at 60 FPS
+
+# Game settings
+WIN_ZONE = pygame.Rect(SCREEN_WIDTH - 80, 0, 80, 100)
