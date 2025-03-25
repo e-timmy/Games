@@ -1,0 +1,4 @@
+Issues with the rotation:
+- black starts up top even when they have the first move
+- The orientation of the pieces should face with their edge (so they don't have to be rotated each time)
+- When black goes, it blips back to being on top, rotates, then white blips in. This obviously shouldn't happen.

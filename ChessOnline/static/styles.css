@@ -1,0 +1,332 @@
+body {
+    font-family: 'Courier New', monospace;
+    background-color: #000;
+    color: #0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    overflow: hidden;
+    background-image: radial-gradient(circle, #032a03, #000);
+    perspective: 1000px; /* Added for 3D perspective */
+}
+
+#game-container {
+    background-color: #111;
+    border: 2px solid #0f0;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 0 20px #0f0;
+    max-width: 600px;
+    transform-style: preserve-3d; /* Enable 3D transformations */
+}
+
+#chess-board-wrapper {
+    position: relative;
+    width: calc(60px * 8 + 2px * 7);
+    height: calc(60px * 8 + 2px * 7);
+    margin: 20px auto;
+    transform-style: preserve-3d; /* Enable 3D transformations */
+    transition: transform 2s ease-in-out;
+}
+
+#chess-board {
+    display: grid;
+    grid-template-columns: repeat(8, 60px);
+    grid-template-rows: repeat(8, 60px);
+    gap: 2px;
+    border: 3px solid #0f0;
+    box-shadow: inset 0 0 10px #0f0;
+    transform-style: preserve-3d; /* Enable 3D transformations */
+    position: absolute;
+    backface-visibility: visible;
+}
+
+.chess-board-rotated {
+    transform: rotateZ(180deg);
+}
+
+.chess-tile {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 40px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    transform-style: preserve-3d;
+}
+
+.chess-tile:hover {
+    box-shadow: 0 0 10px #0f0;
+}
+
+.light {
+    background-color: #222;
+}
+
+.dark {
+    background-color: #000;
+}
+
+.chess-tile::before {
+    content: attr(data-position);
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-size: 10px;
+    color: #0f0;
+    opacity: 0.5;
+}
+
+.chess-piece {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    transform-style: preserve-3d;
+}
+
+/* Rotate the pieces when the board is rotated so they appear right-side up */
+.chess-board-rotated .chess-piece {
+    transform: rotateZ(180deg);
+}
+
+/* Rotate the position labels when the board is rotated */
+.chess-board-rotated .chess-tile::before {
+    transform: rotateZ(180deg);
+}
+
+.white-piece {
+    background: linear-gradient(135deg, #fff, #aaa);
+    color: #000;
+    text-shadow: 0 0 3px rgba(0,0,0,0.5);
+    box-shadow: 0 0 5px rgba(255,255,255,0.8);
+}
+
+.black-piece {
+    background: linear-gradient(135deg, #555, #222);
+    color: #fff;
+    text-shadow: 0 0 3px rgba(255,255,255,0.5);
+    box-shadow: 0 0 5px rgba(0,0,0,0.8);
+}
+
+#coin-flip {
+    text-align: center;
+    margin-bottom: 20px;
+    background-color: rgba(0, 255, 0, 0.1);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #0f0;
+}
+
+#coin {
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, #0f0, #070);
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    font-weight: bold;
+    box-shadow: 0 0 15px #0f0;
+    transition: transform 1s ease-in-out;
+}
+
+#flip-button {
+    background-color: #0f0;
+    color: #000;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 5px;
+}
+
+#flip-button:hover {
+    background-color: #0a0;
+    transform: scale(1.05);
+}
+
+#game-info {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    padding: 10px;
+    background-color: rgba(0, 255, 0, 0.1);
+    border-radius: 5px;
+    border: 1px solid #0f0;
+}
+
+#timer-container, #turn-indicator, #check-indicator {
+    font-size: 18px;
+    font-weight: bold;
+    text-shadow: 0 0 5px #0f0;
+}
+
+#check-indicator {
+    color: #f00;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes flashRed {
+    0%, 100% { background-color: initial; }
+    50% { background-color: rgba(255, 0, 0, 0.7); }
+}
+
+.flash-red {
+    animation: flashRed 0.5s;
+}
+
+.highlight-blue {
+    background-color: rgba(0, 0, 255, 0.5) !important;
+}
+
+.highlight-valid-move {
+    position: relative;
+}
+
+.highlight-valid-move::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: rgba(0, 255, 0, 0.4);
+    border-radius: 50%;
+}
+
+.highlight-check {
+    background-color: rgba(255, 0, 0, 0.5) !important;
+}
+
+#game-controls {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+#reset-game {
+    background-color: #0f0;
+    color: #000;
+    border: none;
+    padding: 8px 15px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 5px;
+    margin: 5px;
+}
+
+#reset-game:hover {
+    background-color: #0a0;
+    transform: scale(1.05);
+}
+
+#game-status {
+    margin-top: 15px;
+    text-align: center;
+    font-size: 20px;
+    font-weight: bold;
+    min-height: 30px;
+    color: #0f0;
+    text-shadow: 0 0 5px #0f0;
+}
+
+@keyframes flip {
+    0% { transform: rotateY(0); }
+    100% { transform: rotateY(720deg); }
+}
+
+.flipping {
+    animation: flip 2s ease-out;
+}
+
+/* Board rotation animation */
+@keyframes boardRotation {
+    0% { transform: translateZ(0) rotateZ(0deg); }
+    25% { transform: translateZ(100px) rotateZ(0deg); }
+    75% { transform: translateZ(100px) rotateZ(180deg); }
+    100% { transform: translateZ(0) rotateZ(180deg); }
+}
+
+@keyframes boardRotationReverse {
+    0% { transform: translateZ(0) rotateZ(180deg); }
+    25% { transform: translateZ(100px) rotateZ(180deg); }
+    75% { transform: translateZ(100px) rotateZ(0deg); }
+    100% { transform: translateZ(0) rotateZ(0deg); }
+}
+
+.board-rotating {
+    animation: boardRotation 2s ease-in-out forwards;
+}
+
+.board-rotating-reverse {
+    animation: boardRotationReverse 2s ease-in-out forwards;
+}
+
+/* Board coordinates along edges */
+.board-coordinates {
+    position: absolute;
+    font-size: 14px;
+    color: #0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.file-label {
+    width: 60px;
+    height: 20px;
+    text-align: center;
+}
+
+.rank-label {
+    width: 20px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.files-top {
+    top: -25px;
+    left: 0;
+    width: 100%;
+    display: flex;
+}
+
+.files-bottom {
+    bottom: -25px;
+    left: 0;
+    width: 100%;
+    display: flex;
+}
+
+.ranks-left {
+    top: 0;
+    left: -25px;
+    height: 100%;
+    flex-direction: column;
+}
+
+.ranks-right {
+    top: 0;
+    right: -25px;
+    height: 100%;
+    flex-direction: column;
+}

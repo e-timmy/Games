@@ -1,0 +1,678 @@
+Good prompt (30 mins):
+
+I want some base code generated to act as the foundation for a 2d rpg game.
+The code needs to be in python, it can utilise any libraries to bring it to life.
+For the moment, all rendering should be internal to the application, no use of sprites or images, there should just be interally rendered blocks/placeholders for any future assets.
+The base should procedurally generate a map which is represented using characters.
+For instance, movable space could be o, walls could be -, and so on.
+With this representation generated, the map itself should be rendered using graphics - with placeholders for any relevant assets on the map.
+This map should also be printed to the console. There should be a camera class which captures a portion of the map (starts in the middle).
+A player character should start centred on this camera.
+To smooth out the rendering process - only the current portion of the map on the screen should be rendered at any one time (slightly greater than the camera to handle movement).
+The player should be able to move using the arrow keys, and sprint pressing down space. They should also be represented with a placeholder rendering.
+
+
+When generating this code, first state the requirements back to me, so that I know we're on the same page. Then produce the code. It should adhere to OOP principles, but not exceed more than six files. These files should be kept separate from one another within code generation. Commenting should be minimal - only included for each function/class/method to explain how it works, otherwise no inline comments. After the code production, list any assumptions made to fill in the blanks of the project and make it workable.
+
+Prompt two:
+I need some html/js/css written for a notification pop up on a website. The divs should be structured in a way so that there are: notification, notification-component.
+The notification itself should consist of the following: Title, description, example (and in this order). Placeholder text should be placed in each one for the moment.
+The title should be centred, with a line underneath, and act as a heading (larger/bold and so on).
+The description should just be simple plain text below the title, can even just us paragraph elements.
+The example is slightly different. It should be boxed off (with a slightly contrasting background colour), text can otherwise just be paragraph elements, but certain words should be highlighted blue using a span called 'highlight'.
+Styles should be consistent with a 'dark' aesthetic, as that is how the website works.
+For testing purposes, this should notification should just appear when the template renders (so, it should be included in an index file).
+
+Prompt three:
+I need some help debugging my website. For some reason none of the data is appearing. Here is the code:
+
+app.py
+```python
+import json
+from datetime import datetime
+
+from flask import Flask, render_template, jsonify
+import requests
+from io import BytesIO
+import base64
+from PIL import Image, ImageDraw
+import logging
+
+app = Flask(__name__)
+logging.basicConfig(level=logging.DEBUG)
+
+def get_api_key():
+    with open('key', 'r') as file:
+        return file.read().strip()
+
+def generate_cricket_images():
+    # Cricket Ball
+    ball_img = Image.new('RGBA', (40, 40), (255, 255, 255, 0))
+    draw = ImageDraw.Draw(ball_img)
+    draw.ellipse((0, 0, 39, 39), fill='red')
+    draw.arc((5, 5, 35, 35), start=45, end=225, fill='white', width=2)
+
+    ball_buffer = BytesIO()
+    ball_img.save(ball_buffer, format='PNG')
+    ball_data = base64.b64encode(ball_buffer.getvalue()).decode()
+
+    # Cricket Bat
+    bat_img = Image.new('RGBA', (40, 120), (255, 255, 255, 0))
+    draw = ImageDraw.Draw(bat_img)
+    draw.rectangle((15, 0, 25, 100), fill='#8B4513')
+    draw.polygon([(0, 100), (40, 100), (30, 120), (10, 120)], fill='#8B4513')
+
+    bat_buffer = BytesIO()
+    bat_img.save(bat_buffer, format='PNG')
+    bat_data = base64.b64encode(bat_buffer.getvalue()).decode()
+
+    return ball_data, bat_data
+
+
+def fetch_recent_matches():
+    url = "https://free-cricbuzz-cricket-api.p.rapidapi.com/cricket-matches-recent"
+    headers = {
+        "x-rapidapi-host": "free-cricbuzz-cricket-api.p.rapidapi.com",
+        "x-rapidapi-key": get_api_key()
+    }
+
+    try:
+        logging.debug(f"Fetching recent matches from: {url}")
+        response = requests.get(url, headers=headers)
+        logging.debug(f"Status code: {response.status_code}")
+        logging.debug(f"Response text: {response.text[:200]}...")
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') == 'success':
+                all_matches = []
+                for series in data.get('response', []):
+                    if 'Big Bash' in series.get('seriesName', ''):
+                        all_matches.extend(series.get('matchList', []))
+                return all_matches
+            else:
+                logging.warning(f"API returned unsuccessful status: {data.get('status')}")
+        else:
+            logging.error(f"Failed to fetch recent matches. Status code: {response.status_code}")
+    except Exception as e:
+        logging.error(f"Error fetching recent matches: {e}")
+
+    return []
+
+
+def fetch_upcoming_matches():
+    url = "https://free-cricbuzz-cricket-api.p.rapidapi.com/cricket-matches-upcoming"  # Guessing the endpoint
+    headers = {
+        "x-rapidapi-host": "free-cricbuzz-cricket-api.p.rapidapi.com",
+        "x-rapidapi-key": get_api_key()
+    }
+
+    try:
+        logging.debug(f"Fetching upcoming matches from: {url}")
+        response = requests.get(url, headers=headers)
+        logging.debug(f"Status code: {response.status_code}")
+        logging.debug(f"Response text: {response.text[:200]}...")
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') == 'success':
+                matches = data.get('response', [])
+                for series in matches:
+                    if series.get('matchList'):
+                        return series['matchList'][0]  # Return the first upcoming match
+        else:
+            logging.error(f"Failed to fetch upcoming matches. Status code: {response.status_code}")
+    except Exception as e:
+        logging.error(f"Error fetching upcoming matches: {e}")
+
+    return None
+
+def get_match_scorecard(match_id):
+    url = f"https://free-cricbuzz-cricket-api.p.rapidapi.com/matches/get-info?matchId={match_id}"
+    headers = {
+        "x-rapidapi-host": "free-cricbuzz-cricket-api.p.rapidapi.com",
+        "x-rapidapi-key": get_api_key()
+    }
+
+    try:
+        logging.debug(f"Fetching scorecard for match ID: {match_id}")
+        response = requests.get(url, headers=headers)
+        logging.debug(f"API Response Status: {response.status_code}")
+        logging.debug(f"API Response Content: {response.text[:500]}...")
+
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logging.error(f"Failed to fetch scorecard. Status code: {response.status_code}")
+    except requests.RequestException as e:
+        logging.error(f"API Request Error: {e}")
+    except ValueError as e:
+        logging.error(f"JSON Decoding Error: {e}")
+
+    return None
+
+def fetch_series_list():
+    url = "https://free-cricbuzz-cricket-api.p.rapidapi.com/series/get-all-list"
+    headers = {
+        "x-rapidapi-host": "free-cricbuzz-cricket-api.p.rapidapi.com",
+        "x-rapidapi-key": get_api_key()
+    }
+
+    try:
+        logging.debug(f"Fetching series list from: {url}")
+        response = requests.get(url, headers=headers)
+        logging.debug(f"Status code: {response.status_code}")
+        logging.debug(f"Response text: {response.text[:200]}...")
+
+        if response.status_code == 200:
+            data = response.json()
+            return data.get('data', [])
+        else:
+            logging.error(f"Failed to fetch series list. Status code: {response.status_code}")
+    except Exception as e:
+        logging.error(f"Error fetching series list: {e}")
+
+    return []
+
+
+def fetch_all_series():
+    url = "https://free-cricbuzz-cricket-api.p.rapidapi.com/cricket-series"
+    headers = {
+        "x-rapidapi-host": "free-cricbuzz-cricket-api.p.rapidapi.com",
+        "x-rapidapi-key": get_api_key()
+    }
+
+    try:
+        logging.debug(f"Fetching all series from: {url}")
+        response = requests.get(url, headers=headers)
+        logging.debug(f"Status code: {response.status_code}")
+        logging.debug(f"Response text: {response.text[:200]}...")
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') == 'success':
+                return data.get('response', [])
+            else:
+                logging.warning(f"API returned unsuccessful status: {data.get('status')}")
+        else:
+            logging.error(f"Failed to fetch series. Status code: {response.status_code}")
+    except Exception as e:
+        logging.error(f"Error fetching series: {e}")
+
+    return []
+
+
+def fetch_matches_for_series(series_id):
+    url = f"https://free-cricbuzz-cricket-api.p.rapidapi.com/cricket-match-series/{series_id}"
+    headers = {
+        "x-rapidapi-host": "free-cricbuzz-cricket-api.p.rapidapi.com",
+        "x-rapidapi-key": get_api_key()
+    }
+
+    try:
+        logging.debug(f"Fetching matches for series {series_id} from: {url}")
+        response = requests.get(url, headers=headers)
+        logging.debug(f"Status code: {response.status_code}")
+        logging.debug(f"Response text: {response.text[:200]}...")
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') == 'success':
+                return data.get('response', [])
+            else:
+                logging.warning(f"API returned unsuccessful status: {data.get('status')}")
+        else:
+            logging.error(f"Failed to fetch matches. Status code: {response.status_code}")
+    except Exception as e:
+        logging.error(f"Error fetching matches: {e}")
+
+    return []
+
+
+def fetch_bbl_matches():
+    all_series = fetch_all_series()
+    bbl_matches = []
+
+    for series in all_series:
+        if 'Big Bash' in series.get('name', ''):
+            logging.info(f"Found BBL series: {series['name']} (ID: {series['id']})")
+            matches = fetch_matches_for_series(series['id'])
+            bbl_matches.extend(matches)
+
+    # Sort matches by date (assuming date format allows simple string comparison)
+    bbl_matches.sort(key=lambda x: x.get('date', ''), reverse=True)
+
+    logging.info(f"Total BBL matches fetched: {len(bbl_matches)}")
+    return bbl_matches
+
+
+@app.route('/')
+def home():
+    ball_img, bat_img = generate_cricket_images()
+    all_matches = fetch_bbl_matches()
+    matches_to_display = all_matches[:6]  # Display only the first 6 matches
+
+    logging.info(f"Total BBL matches to display: {len(matches_to_display)}")
+
+    return render_template('index.html',
+                           matches=matches_to_display,
+                           total_matches=len(all_matches),
+                           ball_img=ball_img,
+                           bat_img=bat_img)
+
+
+@app.route('/more_matches/<int:offset>')
+def more_matches(offset):
+    all_matches = fetch_bbl_matches()
+    if all_matches:
+        return jsonify(all_matches[offset:offset + 6])
+    return jsonify([])
+
+@app.route('/scorecard/<int:match_id>')
+def scorecard(match_id):
+    logging.debug(f"Scorecard route called for match ID: {match_id}")
+    scorecard_data = get_match_scorecard(match_id)
+    if scorecard_data is None:
+        logging.error(f"Failed to retrieve scorecard data for match ID: {match_id}")
+        return jsonify({"error": "Failed to retrieve scorecard data"}), 500
+    return jsonify(scorecard_data)
+
+@app.template_filter('datetimeformat')
+def datetimeformat(value):
+    try:
+        # Adjust this based on the date format from the API
+        dt = datetime.fromtimestamp(int(value) / 1000)  # Assuming milliseconds
+        return dt.strftime('%B %d, %Y - %I:%M %p')
+    except:
+        return value
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+index.html
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cricket Match Coverage</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <img src="data:image/png;base64,{{ bat_img }}" alt="Cricket Bat" class="header-icon">
+            <h1>Cricket Match Coverage</h1>
+            <img src="data:image/png;base64,{{ ball_img }}" alt="Cricket Ball" class="header-icon">
+        </div>
+    </header>
+
+    <main>
+        <h2>Recent Big Bash League Matches</h2>
+
+        <div id="matches-grid" class="matches-grid">
+            {% for match in matches %}
+            <div class="match-card" data-match-id="{{ match.matchId }}">
+                <h2>{{ match.matchTitle }}</h2>
+                <div class="match-info">
+                    <p class="match-format">{{ match.matchFormat }}</p>
+                    <p class="match-status">{{ match.matchStatus }}</p>
+                </div>
+                <div class="venue-info">
+                    <p>{{ match.matchVenue }}</p>
+                    <p>{{ match.matchDate }} - {{ match.matchTime }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if total_matches > 6 %}
+        <div class="load-more">
+            <button id="load-more-btn" data-offset="6">Load More Matches</button>
+        </div>
+        {% endif %}
+    </main>
+
+    <div id="scorecard-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="scorecard-details"></div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
+```
+
+script.js
+```js
+document.addEventListener('DOMContentLoaded', function() {
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    const matchesGrid = document.getElementById('matches-grid');
+
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', function() {
+            const offset = parseInt(this.dataset.offset);
+            fetch(`/more_matches/${offset}`)
+                .then(response => response.json())
+                .then(matches => {
+                    if (matches.length > 0) {
+                        matches.forEach(match => {
+                            const matchCard = document.createElement('div');
+                            matchCard.className = 'match-card';
+                            matchCard.dataset.matchId = match.matchId;
+                            matchCard.innerHTML = `
+                                <h2>${match.matchTitle}</h2>
+                                <div class="match-info">
+                                    <p class="match-format">${match.matchFormat}</p>
+                                    <p class="match-status">${match.matchStatus}</p>
+                                </div>
+                                <div class="venue-info">
+                                    <p>${match.matchVenue}</p>
+                                    <p>${match.matchDate} - ${match.matchTime}</p>
+                                </div>
+                            `;
+                            matchesGrid.appendChild(matchCard);
+                        });
+
+                        // Update the offset for the next load
+                        this.dataset.offset = offset + 6;
+
+                        // Hide the button if no more matches are available
+                        if (matches.length < 6) {
+                            this.style.display = 'none';
+                        }
+                    } else {
+                        this.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading more matches:', error);
+                    this.textContent = 'Error loading matches';
+                });
+        });
+    }
+
+    // Add click listeners for match cards (for displaying scorecards)
+    function addMatchCardListeners() {
+        document.querySelectorAll('.match-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const matchId = this.dataset.matchId;
+                fetch(`/scorecard/${match_id}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        displayScorecard(data);
+                        document.getElementById('scorecard-modal').style.display = 'block';
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            });
+        });
+    }
+
+    addMatchCardListeners();
+});
+```
+
+style.css
+```css
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #90EE90 0%, #98FB98 100%);
+    min-height: 100vh;
+    color: #333;
+}
+
+header {
+    background: linear-gradient(to right, #2E7D32 0%, #388E3C 100%);
+    color: white;
+    padding: 1rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.header-icon {
+    width: 40px;
+    height: auto;
+}
+
+.matches-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    padding: 2rem;
+}
+
+.match-card {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+.match-card:hover {
+    transform: translateY(-5px);
+}
+
+.match-info {
+    margin: 1rem 0;
+}
+
+.match-format {
+    font-style: italic;
+    color: #666;
+}
+
+.match-status {
+    color: #2E7D32;
+    font-weight: bold;
+}
+
+.score-info {
+    margin: 1rem 0;
+    padding: 1rem;
+    background-color: #f5f5f5;
+    border-radius: 5px;
+}
+
+.venue-info {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.no-matches {
+    text-align: center;
+    margin-top: 2rem;
+    font-size: 1.2rem;
+    color: #666;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.7);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: 10px;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.match-card {
+    cursor: pointer;
+}
+
+.batting-scorecard, .bowling-scorecard {
+    width: 100%;
+    margin-bottom: 20px;
+    border-collapse: collapse;
+}
+
+.batting-scorecard th, .bowling-scorecard th,
+.batting-scorecard td, .bowling-scorecard td {
+    padding: 8px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+
+.batting-scorecard th, .bowling-scorecard th {
+    background-color: #f4f4f4;
+    font-weight: bold;
+}
+
+.extras-info, .total-score {
+    margin: 10px 0;
+    padding: 5px;
+    background-color: #f8f8f8;
+}
+
+.fow {
+    margin: 15px 0;
+    padding: 10px;
+    background-color: #f8f8f8;
+    border-radius: 4px;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 2% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 90%;
+    max-width: 1200px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.load-more {
+    text-align: center;
+    margin: 2rem 0;
+}
+
+#load-more-btn {
+    padding: 1rem 2rem;
+    font-size: 1rem;
+    background-color: #2E7D32;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#load-more-btn:hover {
+    background-color: #1B5E20;
+}
+
+.series-image {
+    text-align: center;
+    margin: 2rem 0;
+}
+
+.series-image img {
+    max-width: 300px;
+    height: auto;
+    border-radius: 10px;
+}
+
+.upcoming-match {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.upcoming-match h2 {
+    color: #2E7D32;
+    margin-bottom: 1rem;
+}
+
+.upcoming-match .match-card {
+    background-color: #f5f5f5;
+    padding: 1rem;
+    border-radius: 8px;
+}
+```
+
+I get the following printed to the console:
+
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 243-638-972
+DEBUG:root:Fetching all series from: https://free-cricbuzz-cricket-api.p.rapidapi.com/cricket-series
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): free-cricbuzz-cricket-api.p.rapidapi.com:443
+DEBUG:urllib3.connectionpool:https://free-cricbuzz-cricket-api.p.rapidapi.com:443 "GET /cricket-series HTTP/1.1" 200 None
+DEBUG:root:Status code: 200
+DEBUG:root:Response text: {"status":"success","response":[{"date":"February 2024","seriesList":[{"seriesId":"7572","seriesName":"ICC Cricket World Cup League Two 2023-27","seriesDate":"Feb 15 - Mar 30"}]},{"date":"September 20...
+INFO:root:Total BBL matches fetched: 0
+INFO:root:Total BBL matches to display: 0
+INFO:werkzeug:127.0.0.1 - - [07/Mar/2025 09:25:59] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [07/Mar/2025 09:25:59] "GET /static/style.css HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [07/Mar/2025 09:25:59] "GET /static/script.js HTTP/1.1" 200 -
+
+Fourth question:
+I need two functions. First, a maze-generation function, which procedurally generates a solvable 2d tiled maze.
+This can just be represented using character keys, with one key representing movable space. To generate this should use wilson's algorithm.
+The starting/end points can be random positions on the edges of the 2d space.
+Then i need another function to test out that the mazes produced are indeed solvable! This should use a dfs strategy, just trying out all options.
+There should be a level of robustness tied to this algorithm, so the user can say - solve N number of mazes generated, to get a confidence in it.
+Feedback in the form of the maze and the path found should be printed out iteratively in this testing algorithm (i.e. as found).
