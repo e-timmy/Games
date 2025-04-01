@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academic Personal Website</title>
+    <style>
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            font-family: 'Arial', sans-serif;
+            scroll-behavior: smooth;
+            overflow-x: hidden;
+            height: 100%;
+            background-color: #fff8f3;
+        }
+
+        /* Hero/Landing page */
+        #hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('/api/placeholder/1200/800') center/cover no-repeat;
+            color: white;
+            text-align: center;
+            transition: opacity 1.2s ease;
+            position: absolute;
+            width: 100%;
+            z-index: 10;
+        }
+
+        #hero.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        #hero p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            max-width: 600px;
+        }
+
+        #enter-btn {
+            padding: 12px 30px;
+            background-color: #FF8C00;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        #enter-btn:hover {
+            background-color: #FF7000;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+        }
+
+        /* Navigation */
+        #nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 1.2rem 2rem;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            border-bottom: 1px solid rgba(255, 140, 0, 0.1);
+            transform: translateY(-100%);
+            transition: transform 0.5s ease-out, opacity 0.5s ease;
+            opacity: 0;
+        }
+
+        #nav.visible {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        #nav ul {
+            display: flex;
+            list-style: none;
+            gap: 3rem;
+        }
+
+        #nav li {
+            position: relative;
+        }
+
+        #nav a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            font-size: 1.1rem;
+            transition: color 0.3s;
+        }
+
+        #nav a:hover, #nav a.active {
+            color: #FF8C00;
+        }
+
+        #nav a.active::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #FF8C00;
+            transition: width 0.3s;
+        }
+
+        /* Content area */
+        #content-container {
+            position: relative;
+            min-height: 100vh;
+            overflow: hidden;
+            padding-top: 80px;
+            display: none;
+        }
+
+        .page {
+            position: absolute;
+            width: 100%;
+            min-height: calc(100vh - 80px);
+            padding: 2rem 15%;
+            transition: transform 0.6s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transform: translateX(100vw);
+        }
+
+        .page.active {
+            transform: translateX(0);
+        }
+
+        .page h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: #FF8C00;
+            position: relative;
+            display: inline-block;
+            margin-top: 1rem;
+        }
+
+        .page h2::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background-color: #FF8C00;
+        }
+
+        .page p {
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            color: #444;
+            max-width: 800px;
+        }
+
+        /* Specific page styles */
+        #about { background-color: #fff8f3; }
+        #education { background-color: #fff9f5; }
+        #publications { background-color: #fffaf6; }
+        #contact { background-color: #fffbf8; }
+
+        /* Contact form styling */
+        .contact-form input,
+        .contact-form textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        .contact-form textarea {
+            height: 150px;
+            resize: vertical;
+        }
+
+        .contact-form button {
+            padding: 12px 25px;
+            background-color: #FF8C00;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .contact-form button:hover {
+            background-color: #FF7000;
+        }
+
+        /* Publications styling */
+        .publication-item {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 140, 0, 0.2);
+        }
+
+        .publication-item:last-child {
+            border-bottom: none;
+        }
+
+        .publication-item h3 {
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .publication-year {
+            color: #FF8C00;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        /* Education timeline */
+        .timeline {
+            position: relative;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .timeline::after {
+            content: '';
+            position: absolute;
+            width: 2px;
+            background-color: rgba(255, 140, 0, 0.3);
+            top: 0;
+            bottom: 0;
+            left: 0;
+            margin-left: 10px;
+        }
+
+        .timeline-item {
+            padding: 10px 40px;
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            left: 0;
+            background-color: white;
+            border: 4px solid #FF8C00;
+            top: 15px;
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        .timeline-date {
+            font-weight: bold;
+            color: #FF8C00;
+        }
+
+        .timeline-content {
+            padding: 20px;
+            background-color: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .timeline-content h3 {
+            margin-top: 0;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero/Landing page -->
+    <section id="hero">
+        <h1>Dr. Jane Smith</h1>
+        <p>Associate Professor of Computer Science</p>
+        <button id="enter-btn">Enter Website</button>
+    </section>
+
+    <!-- Navigation -->
+    <nav id="nav">
+        <ul>
+            <li><a href="#about" class="nav-link active" data-index="0">About</a></li>
+            <li><a href="#education" class="nav-link" data-index="1">Education</a></li>
+            <li><a href="#publications" class="nav-link" data-index="2">Publications</a></li>
+            <li><a href="#contact" class="nav-link" data-index="3">Contact</a></li>
+        </ul>
+    </nav>
+
+    <!-- Content container -->
+    <div id="content-container">
+        <!-- About page -->
+        <section id="about" class="page active" data-index="0">
+            <h2>About Me</h2>
+            <p>Welcome to my academic portfolio. I am Dr. Jane Smith, an Associate Professor specializing in Artificial Intelligence and Machine Learning at the University of Technology. My research focuses on developing novel algorithms for pattern recognition and natural language processing, with applications in healthcare and social media analysis.</p>
+            <p>With over 15 years of experience in the field, I have collaborated with researchers across disciplines to address complex computational problems. I am particularly interested in the ethical implications of AI and work to ensure that technological advancements benefit society while minimizing potential harms.</p>
+        </section>
+
+        <!-- Education page -->
+        <section id="education" class="page" data-index="1">
+            <h2>Education</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-date">2010</div>
+                    <div class="timeline-content">
+                        <h3>Ph.D. in Computer Science</h3>
+                        <p>Stanford University</p>
+                        <p>Dissertation: "Neural Network Approaches to Contextual Learning in Natural Language Processing"</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-date">2006</div>
+                    <div class="timeline-content">
+                        <h3>M.S. in Computer Science</h3>
+                        <p>Massachusetts Institute of Technology</p>
+                        <p>Thesis: "Optimization Algorithms for Large-Scale Machine Learning"</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-date">2004</div>
+                    <div class="timeline-content">
+                        <h3>B.S. in Computer Engineering</h3>
+                        <p>University of California, Berkeley</p>
+                        <p>Graduated Summa Cum Laude</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Publications page -->
+        <section id="publications" class="page" data-index="2">
+            <h2>Publications</h2>
+            <div class="publication-item">
+                <h3><span class="publication-year">2023</span> "Advances in Self-Supervised Learning for Medical Image Analysis"</h3>
+                <p>Journal of Artificial Intelligence in Medicine, Vol. 45, pp. 78-92</p>
+                <p>Co-authored with Dr. Robert Chen and Dr. Lisa Wong, this paper explores novel techniques in self-supervised learning that significantly improve diagnostic accuracy in medical imaging without requiring large labeled datasets.</p>
+            </div>
+            <div class="publication-item">
+                <h3><span class="publication-year">2022</span> "Ethical Frameworks for Responsible AI Development"</h3>
+                <p>IEEE Transactions on Technology and Society, Vol. 3, Issue 2</p>
+                <p>This paper proposes a comprehensive framework for evaluating the ethical implications of AI systems during the development process, incorporating perspectives from diverse stakeholders and emphasizing transparency and accountability.</p>
+            </div>
+        </section>
+
+        <!-- Contact page -->
+        <section id="contact" class="page" data-index="3">
+            <h2>Contact Me</h2>
+            <p>I welcome collaboration opportunities, speaking engagements, and questions about my research. Please feel free to reach out using the form below or contact me directly at jane.smith@university.edu.</p>
+            <p>For prospective graduate students interested in working with me, please include details about your research interests and background in your message.</p>
+
+            <form class="contact-form">
+                <input type="text" placeholder="Your Name" required>
+                <input type="email" placeholder="Your Email" required>
+                <input type="text" placeholder="Subject">
+                <textarea placeholder="Your Message" required></textarea>
+                <button type="submit">Send Message</button>
+            </form>
+        </section>
+    </div>
+
+    <script>
+        // DOM elements
+        const hero = document.getElementById('hero');
+        const nav = document.getElementById('nav');
+        const enterBtn = document.getElementById('enter-btn');
+        const contentContainer = document.getElementById('content-container');
+        const navLinks = document.querySelectorAll('.nav-link');
+        const pages = document.querySelectorAll('.page');
+
+        // Current page index
+        let currentPageIndex = 0;
+        let isTransitioning = false;
+
+        // Enter website button event
+        enterBtn.addEventListener('click', () => {
+            hero.classList.add('hidden');
+
+            // Prepare the content container before showing it
+            contentContainer.style.display = 'block';
+            contentContainer.style.opacity = '0';
+
+            setTimeout(() => {
+                hero.style.display = 'none';
+
+                // Fade in the content
+                contentContainer.style.transition = 'opacity 1.2s ease';
+                contentContainer.style.opacity = '1';
+
+                // Show the navigation after a slight delay
+                setTimeout(() => {
+                    nav.classList.add('visible');
+                }, 400);
+            }, 1000);
+        });
+
+        // Navigation links event
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+
+                // Don't do anything if currently transitioning
+                if (isTransitioning) return;
+
+                // Get target page index
+                const targetIndex = parseInt(link.getAttribute('data-index'));
+
+                // Don't do anything if clicking the current page
+                if (targetIndex === currentPageIndex) return;
+
+                // Update active nav link
+                navLinks.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+
+                // Start sequential transition
+                startSequentialTransition(targetIndex);
+            });
+        });
+
+        // Function to handle sequential transition with smooth animation
+        function startSequentialTransition(targetIndex) {
+            // Set transitioning flag
+            isTransitioning = true;
+
+            const currentPage = pages[currentPageIndex];
+            const targetPage = pages[targetIndex];
+            const direction = targetIndex > currentPageIndex ? 1 : -1;
+            const distance = Math.abs(targetIndex - currentPageIndex);
+
+            // Animation duration based on distance (longer for greater distances)
+            const baseDuration = 500;  // ms
+            const additionalTimePerPage = 150; // ms
+            const totalDuration = baseDuration + (additionalTimePerPage * (distance - 1));
+
+            // Prepare all pages that will be visible during the transition
+            const intermediatePagesIndices = [];
+            if (direction === 1) {
+                for (let i = currentPageIndex + 1; i < targetIndex; i++) {
+                    intermediatePagesIndices.push(i);
+                }
+            } else {
+                for (let i = currentPageIndex - 1; i > targetIndex; i--) {
+                    intermediatePagesIndices.push(i);
+                }
+            }
+
+            // Position target page
+            targetPage.style.display = 'flex';
+            targetPage.style.transform = `translateX(${direction * 100 * distance}vw)`;
+
+            // Set up intermediate pages if any
+            intermediatePagesIndices.forEach((idx, i) => {
+                const page = pages[idx];
+                page.style.display = 'flex';
+                page.style.transform = `translateX(${direction * 100 * (i + 1)}vw)`;
+                // No transition yet - we're just positioning
+                page.style.transition = 'none';
+            });
+
+            // Force reflow to ensure positioning takes effect before starting animation
+            void document.body.offsetHeight;
+
+            // Set up smooth transitions for all pages
+            currentPage.style.transition = `transform ${totalDuration}ms cubic-bezier(0.4, 0.0, 0.2, 1)`;
+            targetPage.style.transition = `transform ${totalDuration}ms cubic-bezier(0.4, 0.0, 0.2, 1)`;
+            intermediatePagesIndices.forEach(idx => {
+                const page = pages[idx];
+                page.style.transition = `transform ${totalDuration}ms cubic-bezier(0.4, 0.0, 0.2, 1)`;
+            });
+
+            // Start the animation with a small delay to ensure everything is set up
+            setTimeout(() => {
+                // Move current page out
+                currentPage.style.transform = `translateX(${-direction * 100 * distance}vw)`;
+
+                // Move target page in
+                targetPage.style.transform = 'translateX(0)';
+
+                // Move intermediate pages to their final positions
+                intermediatePagesIndices.forEach((idx, i) => {
+                    const page = pages[idx];
+                    page.style.transform = `translateX(${-direction * 100 * (distance - i - 1)}vw)`;
+                });
+
+                // Once animation completes
+                setTimeout(() => {
+                    // Update active state
+                    currentPage.classList.remove('active');
+                    targetPage.classList.add('active');
+
+                    // Hide pages that are no longer visible
+                    currentPage.style.display = 'none';
+                    intermediatePagesIndices.forEach(idx => {
+                        pages[idx].style.display = 'none';
+                    });
+
+                    // Reset all transitions
+                    pages.forEach(page => {
+                        page.style.transition = 'transform 0.6s ease-in-out';
+                    });
+
+                    // Update current index and end transition
+                    currentPageIndex = targetIndex;
+                    isTransitioning = false;
+                }, totalDuration + 50);
+            }, 20);
+        }
+    </script>
+</body>
+</html>
