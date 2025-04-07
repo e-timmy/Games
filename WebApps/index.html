@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Website</title>
+    <style>
+        /* Global Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Vertical Navigation */
+        .vert-nav-container {
+            position: fixed;
+            left: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* Horizontal Navigation */
+        .horz-nav-container {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .nav-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: rgba(192, 192, 192, 0.5);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-dot.active {
+            background-color: #e0e0e0;
+            transform: scale(1.4);
+            box-shadow: 0 0 15px rgba(224, 224, 224, 0.7);
+        }
+
+        .nav-dot:hover {
+            background-color: rgba(224, 224, 224, 0.8);
+        }
+
+        /* Page Styles */
+        .page-container {
+            position: relative;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        .vertical-page {
+            position: absolute;
+            width: 100%;
+            height: 100vh;
+            transition: transform 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-bottom: 60px; /* Space for horizontal nav */
+        }
+
+        .subpage-container {
+            position: relative;
+            width: 300%; /* 3 subpages */
+            height: 100%;
+            display: flex;
+            flex-wrap: nowrap;
+            transition: transform 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+        }
+
+        .subpage {
+            flex: 0 0 33.333%;
+            width: 33.333%;
+            height: 100%;
+            padding: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(192, 192, 192, 0.5) transparent;
+        }
+
+        .subpage::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .subpage::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .subpage::-webkit-scrollbar-thumb {
+            background-color: rgba(192, 192, 192, 0.5);
+            border-radius: 3px;
+        }
+
+        /* Consistent page background for seamlessness */
+        .vertical-page {
+            background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
+        }
+
+        /* Set z-indices for proper layering */
+        .landing-page {
+            z-index: 4;
+        }
+
+        .publications-page {
+            z-index: 3;
+        }
+
+        .portfolio-page {
+            z-index: 2;
+        }
+
+        .contact-page {
+            z-index: 1;
+        }
+
+        /* Removed different subpage backgrounds for seamless experience */
+        .subpage-1, .subpage-2, .subpage-3 {
+            /* No distinct backgrounds for seamlessness */
+        }
+
+        /* Common content styling */
+        .page-title {
+            font-size: 3rem;
+            font-weight: 300;
+            margin-bottom: 2rem;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .page-title::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -10px;
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #c0c0c0, transparent);
+        }
+
+        .subpage-title {
+            font-size: 1.8rem;
+            font-weight: 300;
+            margin-bottom: 1.5rem;
+            color: #e0e0e0;
+            letter-spacing: 2px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .subpage-title::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -5px;
+            width: 40px;
+            height: 2px;
+            background: linear-gradient(90deg, #a0a0a0, transparent);
+        }
+
+        .page-content {
+            max-width: 800px;
+            line-height: 1.6;
+        }
+
+        /* Landing page specific */
+        .hero-text {
+            font-size: 1.2rem;
+            color: #b0b0b0;
+            margin-bottom: 2rem;
+            max-width: 600px;
+        }
+
+        .hero-name {
+            font-size: 4.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, #e0e0e0, #909090);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+
+        /* Publications page */
+        .publication-item {
+            border-left: 2px solid rgba(192, 192, 192, 0.3);
+            padding-left: 20px;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .publication-item:hover {
+            border-left-color: #e0e0e0;
+            transform: translateX(5px);
+        }
+
+        .publication-title {
+            font-size: 1.4rem;
+            color: #e0e0e0;
+            margin-bottom: 5px;
+        }
+
+        .publication-authors {
+            font-style: italic;
+            color: #b0b0b0;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .publication-journal {
+            color: #909090;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        /* Portfolio page */
+        .portfolio-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .portfolio-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .portfolio-item:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .portfolio-thumbnail {
+            width: 100%;
+            height: 150px;
+            background: #404040;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .portfolio-info {
+            padding: 15px;
+        }
+
+        .portfolio-title {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: #e0e0e0;
+        }
+
+        .portfolio-category {
+            font-size: 0.8rem;
+            color: #909090;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Contact page */
+        .contact-form {
+            max-width: 500px;
+            margin-top: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #b0b0b0;
+        }
+
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(192, 192, 192, 0.2);
+            color: #e0e0e0;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: rgba(224, 224, 224, 0.5);
+            box-shadow: 0 0 10px rgba(224, 224, 224, 0.1);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .submit-btn {
+            background: linear-gradient(90deg, #c0c0c0, #909090);
+            color: #121212;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 3px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(192, 192, 192, 0.3);
+        }
+
+        .social-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .social-link {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .social-link:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-3px);
+        }
+
+        .social-icon {
+            color: #c0c0c0;
+            font-size: 18px;
+        }
+
+        /* Futuristic elements */
+        .futuristic-line {
+            position: absolute;
+            width: 1px;
+            height: 70%;
+            background: linear-gradient(to bottom, transparent, #c0c0c0, transparent);
+            left: 20px;
+            top: 15%;
+            opacity: 0.3;
+        }
+
+        .futuristic-circle {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            border: 1px solid rgba(192, 192, 192, 0.1);
+            bottom: -150px;
+            right: -100px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .futuristic-circle::after {
+            content: '';
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 1px solid rgba(192, 192, 192, 0.2);
+            top: 50px;
+            left: 50px;
+        }
+
+        /* Placeholder thumbnail style for portfolio items */
+        .placeholder-thumbnail {
+            background: linear-gradient(135deg, #383838 0%, #484848 100%);
+            color: #707070;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+        <!-- Vertical Navigation (Left Side) -->
+    <div class="vert-nav-container">
+        <div class="nav-dot active" data-index="0" data-type="vertical"></div>
+        <div class="nav-dot" data-index="1" data-type="vertical"></div>
+        <div class="nav-dot" data-index="2" data-type="vertical"></div>
+        <div class="nav-dot" data-index="3" data-type="vertical"></div>
+    </div>
+
+    <!-- Horizontal Navigation (Bottom) -->
+    <div class="horz-nav-container">
+        <div class="nav-dot active" data-index="0" data-type="horizontal"></div>
+        <div class="nav-dot" data-index="1" data-type="horizontal"></div>
+        <div class="nav-dot" data-index="2" data-type="horizontal"></div>
+    </div>
+
+    <!-- Diagonal Navigation Grid (Bottom Left) -->
+    <div class="diagonal-nav-container" style="position: fixed; left: 40px; bottom: 40px; z-index: 100; display: grid; grid-template-columns: repeat(3, 1fr); grid-gap: 15px;">
+        <!-- Row 1 (Landing Page) -->
+        <div class="nav-dot active" data-vert="0" data-horz="0" style="width: 14px; height: 14px;"></div>
+        <div class="nav-dot" data-vert="0" data-horz="1" style="width: 14px; height: 14px;"></div>
+        <div class="nav-dot" data-vert="0" data-horz="2" style="width: 14px; height: 14px;"></div>
+
+        <!-- Row 2 (Publications Page) -->
+        <div class="nav-dot" data-vert="1" data-horz="0" style="width: 14px; height: 14px;"></div>
+        <div class="nav-dot" data-vert="1" data-horz="1" style="width: 14px; height: 14px;"></div>
+        <div class="nav-dot" data-vert="1" data-horz="2" style="width: 14px; height: 14px;"></div>
+
+        <!-- Row 3 (Portfolio Page) -->
+        <div class="nav-dot" data-vert="2" data-horz="0" style="width: 14px; height: 14px;"></div>
+        <div class="nav-dot" data-vert="2" data-horz="1" style="width: 14px; height: 14px;"></div>
+        <div class="nav-dot" data-vert="2" data-horz="2" style="width: 14px; height: 14px;"></div>
+
+        <!-- Row 4 (Contact Page) -->
+        <div class="nav-dot" data-vert="3" data-horz="0" style="width: 14px; height: 14px;"></div>
+        <div class="nav-dot" data-vert="3" data-horz="1" style="width: 14px; height: 14px;"></div>
+        <div class="nav-dot" data-vert="3" data-horz="2" style="width: 14px; height: 14px;"></div>
+    </div>
+
+    <!-- Pages Container -->
+    <div class="page-container">
+        <!-- Landing Page -->
+        <div class="vertical-page landing-page" data-index="0">
+            <div class="futuristic-line"></div>
+            <div class="futuristic-circle"></div>
+            <div class="subpage-container">
+                <!-- Landing Subpage 1 -->
+                <div class="subpage subpage-1">
+                    <h1 class="hero-name">JOHN DOE</h1>
+                    <p class="hero-text">Creative technologist and researcher specializing in innovative digital experiences and human-computer interaction.</p>
+                    <div class="page-content">
+                        <p>Welcome to my personal website showcasing my work, publications, and professional journey. Explore the different sections using the navigation dots on the left and bottom.</p>
+                    </div>
+                </div>
+
+                <!-- Landing Subpage 2 -->
+                <div class="subpage subpage-2">
+                    <h2 class="subpage-title">About Me</h2>
+                    <div class="page-content">
+                        <p>With over 10 years of experience in creative technology, I specialize in developing innovative solutions that bridge the gap between design and technology.</p>
+                        <p>My expertise spans across multiple domains including web development, interactive installations, and immersive experiences.</p>
+                        <p>I believe in pushing the boundaries of what's possible with current technologies while maintaining a focus on usability and accessibility.</p>
+                    </div>
+                </div>
+
+                <!-- Landing Subpage 3 -->
+                <div class="subpage subpage-3">
+                    <h2 class="subpage-title">Skills & Expertise</h2>
+                    <div class="page-content">
+                        <p>My technical toolkit includes:</p>
+                        <ul style="margin-left: 20px; margin-top: 10px; margin-bottom: 20px;">
+                            <li>Frontend Development (HTML, CSS, JavaScript, React)</li>
+                            <li>Creative Coding (WebGL, Three.js, Processing)</li>
+                            <li>UX/UI Design (Figma, Adobe XD)</li>
+                            <li>3D Modeling and Animation</li>
+                            <li>Machine Learning & AI Integration</li>
+                        </ul>
+                        <p>I regularly collaborate with teams of developers, designers, and stakeholders to deliver engaging digital experiences.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Publications Page -->
+        <div class="vertical-page publications-page" data-index="1">
+            <div class="subpage-container">
+                <!-- Publications Subpage 1 -->
+                <div class="subpage subpage-1">
+                    <h2 class="page-title">Publications</h2>
+                    <div class="page-content">
+                        <div class="publication-item">
+                            <h3 class="publication-title">Advances in Human-Computer Interaction for Immersive Environments</h3>
+                            <p class="publication-authors">Doe, J., Smith, A., & Johnson, B.</p>
+                            <p class="publication-journal">Journal of Human-Computer Interaction, 2023, Vol. 42</p>
+                            <p>This paper explores new paradigms for human-computer interaction within virtual and augmented reality environments, focusing on natural gesture recognition and haptic feedback systems.</p>
+                        </div>
+                        <div class="publication-item">
+                            <h3 class="publication-title">Minimalist Design Principles for Enhanced User Experience</h3>
+                            <p class="publication-authors">Doe, J., & Williams, C.</p>
+                            <p class="publication-journal">ACM Conference on User Interface Software and Technology, 2022</p>
+                            <p>An exploration of how minimalist design principles can be applied to enhance user experience in digital interfaces, with a focus on reducing cognitive load and improving accessibility.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Publications Subpage 2 -->
+                <div class="subpage subpage-2">
+                    <h2 class="subpage-title">Recent Articles</h2>
+                    <div class="page-content">
+                        <div class="publication-item">
+                            <h3 class="publication-title">The Future of Web Interaction: Predictive UI Models</h3>
+                            <p class="publication-authors">Doe, J.</p>
+                            <p class="publication-journal">Web Technologies Journal, 2021, Vol. 15</p>
+                            <p>This research presents a framework for implementing predictive user interfaces that adapt to user behavior patterns and preferences in real-time.</p>
+                        </div>
+                        <div class="publication-item">
+                            <h3 class="publication-title">Exploring Gestural Interfaces in Mixed Reality</h3>
+                            <p class="publication-authors">Doe, J., & Anderson, R.</p>
+                            <p class="publication-journal">International Symposium on Mixed and Augmented Reality, 2020</p>
+                            <p>A comprehensive study on natural gesture-based interactions within mixed reality environments, exploring user preferences and cognitive load.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Publications Subpage 3 -->
+                <div class="subpage subpage-3">
+                    <h2 class="subpage-title">Conference Talks</h2>
+                    <div class="page-content">
+                        <div class="publication-item">
+                            <h3 class="publication-title">Designing for Emergent Technologies</h3>
+                            <p class="publication-authors">Keynote Talk</p>
+                            <p class="publication-journal">Future of Digital Design Conference, 2023</p>
+                            <p>A discussion on methodologies for designing user interfaces and experiences for technologies that are still evolving, with practical examples from VR/AR, AI, and IoT domains.</p>
+                        </div>
+                        <div class="publication-item">
+                            <h3 class="publication-title">Ethical Considerations in AI-Driven User Interfaces</h3>
+                            <p class="publication-authors">Panel Discussion</p>
+                            <p class="publication-journal">Tech Ethics Summit, 2022</p>
+                            <p>Participated in an expert panel exploring the ethical implications and responsibilities in developing AI-powered user interfaces that may influence user behavior and decision-making.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Portfolio Page -->
+        <div class="vertical-page portfolio-page" data-index="2">
+            <div class="subpage-container">
+                <!-- Portfolio Subpage 1 -->
+                <div class="subpage subpage-1">
+                    <h2 class="page-title">Portfolio</h2>
+                    <div class="page-content">
+                        <p>A selection of my recent projects spanning web development, interaction design, and research implementations.</p>
+                        <div class="portfolio-grid">
+                            <div class="portfolio-item">
+                                <div class="portfolio-thumbnail placeholder-thumbnail">Project 1</div>
+                                <div class="portfolio-info">
+                                    <h3 class="portfolio-title">Immersive Data Visualization</h3>
+                                    <p class="portfolio-category">VR/AR Development</p>
+                                </div>
+                            </div>
+                            <div class="portfolio-item">
+                                <div class="portfolio-thumbnail placeholder-thumbnail">Project 2</div>
+                                <div class="portfolio-info">
+                                    <h3 class="portfolio-title">Responsive Web Platform</h3>
+                                    <p class="portfolio-category">Web Development</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Portfolio Subpage 2 -->
+                <div class="subpage subpage-2">
+                    <h2 class="subpage-title">Research Projects</h2>
+                    <div class="page-content">
+                        <div class="portfolio-grid">
+                            <div class="portfolio-item">
+                                <div class="portfolio-thumbnail placeholder-thumbnail">Research 1</div>
+                                <div class="portfolio-info">
+                                    <h3 class="portfolio-title">Gesture Control Interface</h3>
+                                    <p class="portfolio-category">Interaction Design</p>
+                                    <p>A research project exploring natural gesture interactions in computing environments, with special focus on accessibility.</p>
+                                </div>
+                            </div>
+                            <div class="portfolio-item">
+                                <div class="portfolio-thumbnail placeholder-thumbnail">Research 2</div>
+                                <div class="portfolio-info">
+                                    <h3 class="portfolio-title">AI Assistant Application</h3>
+                                    <p class="portfolio-category">Machine Learning</p>
+                                    <p>Development of an intelligent assistant that adapts to user behavior patterns over time.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Portfolio Subpage 3 -->
+                <div class="subpage subpage-3">
+                    <h2 class="subpage-title">Experimental Work</h2>
+                    <div class="page-content">
+                        <div class="portfolio-grid">
+                            <div class="portfolio-item">
+                                <div class="portfolio-thumbnail placeholder-thumbnail">Experiment 1</div>
+                                <div class="portfolio-info">
+                                    <h3 class="portfolio-title">Neural Interface Prototype</h3>
+                                    <p class="portfolio-category">Brain-Computer Interface</p>
+                                    <p>Early-stage exploration of direct brain-computer interaction methods using consumer-grade EEG hardware.</p>
+                                </div>
+                            </div>
+                            <div class="portfolio-item">
+                                <div class="portfolio-thumbnail placeholder-thumbnail">Experiment 2</div>
+                                <div class="portfolio-info">
+                                    <h3 class="portfolio-title">Generative Art System</h3>
+                                    <p class="portfolio-category">Creative Coding</p>
+                                    <p>An algorithmic art generation system that creates unique visual compositions based on environmental data.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Page -->
+        <div class="vertical-page contact-page" data-index="3">
+            <div class="subpage-container">
+                <!-- Contact Subpage 1 -->
+                <div class="subpage subpage-1">
+                    <h2 class="page-title">Contact</h2>
+                    <div class="page-content">
+                        <p>Feel free to reach out for collaborations, speaking opportunities, or just to connect.</p>
+                        <div class="contact-form">
+                            <div class="form-group">
+                                <label class="form-label" for="name">Name</label>
+                                <input type="text" id="name" class="form-input" placeholder="Your name">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="email">Email</label>
+                                <input type="email" id="email" class="form-input" placeholder="your.email@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="message">Message</label>
+                                <textarea id="message" class="form-textarea" placeholder="Your message here..."></textarea>
+                            </div>
+                            <button class="submit-btn">Send Message</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Subpage 2 -->
+                <div class="subpage subpage-2">
+                    <h2 class="subpage-title">Connect Online</h2>
+                    <div class="page-content">
+                        <p>Find me on various platforms and social networks.</p>
+                        <div class="social-links" style="margin-top: 30px;">
+                            <a href="#" class="social-link">
+                                <span class="social-icon">in</span>
+                            </a>
+                            <a href="#" class="social-link">
+                                <span class="social-icon">tw</span>
+                            </a>
+                            <a href="#" class="social-link">
+                                <span class="social-icon">gh</span>
+                            </a>
+                            <a href="#" class="social-link">
+                                <span class="social-icon">ig</span>
+                            </a>
+                            <a href="#" class="social-link">
+                                <span class="social-icon">yt</span>
+                            </a>
+                        </div>
+                        <p style="margin-top: 30px;">I regularly post about new projects, design concepts, and technology insights across these platforms.</p>
+                    </div>
+                </div>
+
+                <!-- Contact Subpage 3 -->
+                <div class="subpage subpage-3">
+                    <h2 class="subpage-title">Availability</h2>
+                    <div class="page-content">
+                        <p>I'm currently available for:</p>
+                        <ul style="margin-left: 20px; margin-top: 20px; margin-bottom: 30px;">
+                            <li>Consulting projects</li>
+                            <li>Speaking engagements</li>
+                            <li>Workshop facilitation</li>
+                            <li>Research collaboration</li>
+                        </ul>
+                        <p>My typical response time is within 48 hours. For urgent inquiries, please mention "Urgent" in your message subject.</p>
+                        <p style="margin-top: 20px;">Location: San Francisco Bay Area / Remote</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get all the necessary elements
+        const vertNavDots = document.querySelectorAll('.vert-nav-container .nav-dot');
+        const horzNavDots = document.querySelectorAll('.horz-nav-container .nav-dot');
+        const diagonalNavDots = document.querySelectorAll('.diagonal-nav-container .nav-dot');
+        const vertPages = document.querySelectorAll('.vertical-page');
+        const subpageContainers = document.querySelectorAll('.subpage-container');
+
+        // Track current positions
+        let currentVertIndex = 0;
+        let currentHorzIndex = 0;
+
+        // Initial page setup
+        function initializePages() {
+            // Position vertical pages
+            vertPages.forEach((page, index) => {
+                page.style.transform = `translateY(${index * 100}vh)`;
+            });
+
+            // Position horizontal subpages (already at default position)
+        }
+
+        // Initialize the page positions
+        initializePages();
+
+        // Vertical navigation
+        function navigateVertical(targetIndex) {
+            if (targetIndex === currentVertIndex) return;
+
+            // Update active vertical nav dot
+            vertNavDots.forEach(dot => dot.classList.remove('active'));
+            vertNavDots[targetIndex].classList.add('active');
+
+            // Update diagonal nav dots active status
+            updateDiagonalNavActive();
+
+            // Determine direction (up or down)
+            const direction = targetIndex > currentVertIndex ? 1 : -1;
+
+            if (Math.abs(targetIndex - currentVertIndex) > 1) {
+                // Calculate the total distance for multi-page jumps
+                const totalDistance = Math.abs(targetIndex - currentVertIndex);
+                const baseDuration = 0.5;  // seconds
+                const durationPerPage = 0.2; // additional seconds per page
+                const totalDuration = baseDuration + (totalDistance - 1) * durationPerPage;
+
+                // Set transition duration for a smooth single animation
+                vertPages.forEach(page => {
+                    page.style.transition = `transform ${totalDuration}s cubic-bezier(0.5, 0, 0.5, 1)`;
+                });
+            } else {
+                // Normal transition for adjacent pages
+                vertPages.forEach(page => {
+                    page.style.transition = `transform 0.8s cubic-bezier(0.65, 0, 0.35, 1)`;
+                });
+            }
+
+            // Animate vertical transition
+            vertPages.forEach((page, index) => {
+                const translateY = (index - targetIndex) * 100;
+                page.style.transform = `translateY(${translateY}vh)`;
+            });
+
+            currentVertIndex = targetIndex;
+        }
+
+        // Horizontal navigation
+        function navigateHorizontal(targetIndex) {
+            if (targetIndex === currentHorzIndex) return;
+
+            // Update active horizontal nav dot
+            horzNavDots.forEach(dot => dot.classList.remove('active'));
+            horzNavDots[targetIndex].classList.add('active');
+
+            // Update diagonal nav dots active status
+            updateDiagonalNavActive();
+
+            // Determine direction (left or right)
+            const direction = targetIndex > currentHorzIndex ? 1 : -1;
+
+            if (Math.abs(targetIndex - currentHorzIndex) > 1) {
+                // Calculate the total distance for multi-page jumps
+                const totalDistance = Math.abs(targetIndex - currentHorzIndex);
+                const baseDuration = 0.5;  // seconds
+                const durationPerPage = 0.2; // additional seconds per page
+                const totalDuration = baseDuration + (totalDistance - 1) * durationPerPage;
+
+                // Set transition duration for a smooth single animation
+                subpageContainers.forEach(container => {
+                    container.style.transition = `transform ${totalDuration}s cubic-bezier(0.5, 0, 0.5, 1)`;
+                });
+            } else {
+                // Normal transition for adjacent pages
+                subpageContainers.forEach(container => {
+                    container.style.transition = `transform 0.8s cubic-bezier(0.65, 0, 0.35, 1)`;
+                });
+            }
+
+            // Calculate translate percentage (33.333% per subpage)
+            const translatePercentage = targetIndex * -33.333;
+
+            // Animate horizontal transition for all subpage containers
+            // This ensures that when switching vertical pages, the horizontal position is maintained
+            subpageContainers.forEach(container => {
+                container.style.transform = `translateX(${translatePercentage}%)`;
+            });
+
+            currentHorzIndex = targetIndex;
+        }
+
+        // Diagonal navigation - First horizontal then vertical
+        function navigateDiagonal(vertIndex, horzIndex) {
+            if (vertIndex === currentVertIndex && horzIndex === currentHorzIndex) return;
+
+            // First do horizontal navigation if needed
+            if (horzIndex !== currentHorzIndex) {
+                // Set up a sequence of animations
+                const horizontalTransition = () => {
+                    // Calculate translate percentage (33.333% per subpage)
+                    const translatePercentage = horzIndex * -33.333;
+
+                    // Transition duration for horizontal movement
+                    const horzDuration = 0.6; // slightly faster than normal
+
+                    // Set transition for horizontal movement
+                    subpageContainers.forEach(container => {
+                        container.style.transition = `transform ${horzDuration}s cubic-bezier(0.5, 0, 0.5, 1)`;
+                    });
+
+                    // Apply horizontal transformation
+                    subpageContainers.forEach(container => {
+                        container.style.transform = `translateX(${translatePercentage}%)`;
+                    });
+
+                    // Update horizontal position tracking
+                    currentHorzIndex = horzIndex;
+
+                    // Update active horizontal nav dot
+                    horzNavDots.forEach(dot => dot.classList.remove('active'));
+                    horzNavDots[horzIndex].classList.add('active');
+
+                    // Then do vertical navigation if needed after horizontal is done
+                    if (vertIndex !== currentVertIndex) {
+                        setTimeout(() => {
+                            // Calculate total distance for vertical movement
+                            const totalDistance = Math.abs(vertIndex - currentVertIndex);
+                            const baseDuration = 0.5;
+                            const durationPerPage = 0.2;
+                            const totalDuration = baseDuration + (totalDistance - 1) * durationPerPage;
+
+                            // Set transition for vertical movement
+                            vertPages.forEach(page => {
+                                page.style.transition = `transform ${totalDuration}s cubic-bezier(0.5, 0, 0.5, 1)`;
+                            });
+
+                            // Apply vertical transformation
+                            vertPages.forEach((page, index) => {
+                                const translateY = (index - vertIndex) * 100;
+                                page.style.transform = `translateY(${translateY}vh)`;
+                            });
+
+                            // Update vertical position tracking
+                            currentVertIndex = vertIndex;
+
+                            // Update active vertical nav dot
+                            vertNavDots.forEach(dot => dot.classList.remove('active'));
+                            vertNavDots[vertIndex].classList.add('active');
+                        }, horzDuration * 1000); // Wait for horizontal transition to complete
+                    }
+                };
+
+                // Start the sequence
+                horizontalTransition();
+            }
+            // If only vertical navigation is needed
+            else if (vertIndex !== currentVertIndex) {
+                navigateVertical(vertIndex);
+            }
+
+            // Update diagonal nav dots active status
+            updateDiagonalNavActive();
+        }
+
+        // Function to update which diagonal nav dot is active
+        function updateDiagonalNavActive() {
+            diagonalNavDots.forEach(dot => {
+                const dotVertIndex = parseInt(dot.getAttribute('data-vert'));
+                const dotHorzIndex = parseInt(dot.getAttribute('data-horz'));
+
+                if (dotVertIndex === currentVertIndex && dotHorzIndex === currentHorzIndex) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+        }
+
+        // Add click event listeners to vertical nav dots
+        vertNavDots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                const targetIndex = parseInt(dot.getAttribute('data-index'));
+                navigateVertical(targetIndex);
+            });
+        });
+
+        // Add click event listeners to horizontal nav dots
+        horzNavDots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                const targetIndex = parseInt(dot.getAttribute('data-index'));
+                navigateHorizontal(targetIndex);
+            });
+        });
+
+        // Add click event listeners to diagonal nav dots
+        diagonalNavDots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                const vertTarget = parseInt(dot.getAttribute('data-vert'));
+                const horzTarget = parseInt(dot.getAttribute('data-horz'));
+                navigateDiagonal(vertTarget, horzTarget);
+            });
+        });
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp' && currentVertIndex > 0) {
+                navigateVertical(currentVertIndex - 1);
+            } else if (e.key === 'ArrowDown' && currentVertIndex < vertPages.length - 1) {
+                navigateVertical(currentVertIndex + 1);
+            } else if (e.key === 'ArrowLeft' && currentHorzIndex > 0) {
+                navigateHorizontal(currentHorzIndex - 1);
+            } else if (e.key === 'ArrowRight' && currentHorzIndex < horzNavDots.length - 1) {
+                navigateHorizontal(currentHorzIndex + 1);
+            }
+        });
+
+        // Add mouse wheel navigation (with debounce) for vertical scrolling
+        let wheelDebounceTimer;
+        document.addEventListener('wheel', (e) => {
+            clearTimeout(wheelDebounceTimer);
+            wheelDebounceTimer = setTimeout(() => {
+                if (e.deltaY > 0 && currentVertIndex < vertPages.length - 1) {
+                    navigateVertical(currentVertIndex + 1);
+                } else if (e.deltaY < 0 && currentVertIndex > 0) {
+                    navigateVertical(currentVertIndex - 1);
+                }
+
+                // Add horizontal scrolling with Shift key
+                if (e.shiftKey) {
+                    if (e.deltaX > 0 && currentHorzIndex < horzNavDots.length - 1) {
+                        navigateHorizontal(currentHorzIndex + 1);
+                    } else if (e.deltaX < 0 && currentHorzIndex > 0) {
+                        navigateHorizontal(currentHorzIndex - 1);
+                    }
+                }
+            }, 100); // Debounce time
+        });
+
+        // Initialize diagonal nav active state
+        updateDiagonalNavActive();
+    </script>
+</body>
+</html>

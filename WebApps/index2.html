@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nested Asteroid Dodge Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+        }
+        #outer-game {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #inner-game-container {
+            position: absolute;
+            width: 400px;
+            height: 300px;
+            border: 2px solid white;
+            overflow: hidden;
+            background-color: black;
+        }
+        #inner-game {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        .asteroid {
+            position: absolute;
+            background-color: black;
+            border: 1px solid white;
+            border-radius: 50%;
+        }
+        .player {
+            position: absolute;
+            background-color: black;
+            border: 2px solid white;
+        }
+        .score {
+            position: absolute;
+            font-size: 16px;
+            color: white;
+            z-index: 10;
+            padding: 10px;
+        }
+        #outer-score {
+            top: 10px;
+            left: 10px;
+        }
+        #inner-score {
+            top: 5px;
+            left: 5px;
+            font-size: 12px;
+        }
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            font-size: 24px;
+            z-index: 20;
+            display: none;
+        }
+        .restart-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: black;
+            color: white;
+            border: 2px solid white;
+            cursor: pointer;
+        }
+        .title {
+            position: absolute;
+            top: 5px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 24px;
+        }
+
+        /* Animation styles */
+        .fragment {
+            position: absolute;
+            background-color: white;
+            transform-origin: center;
+            z-index: 5;
+        }
+
+        .explosion {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: white;
+            border-radius: 50%;
+            z-index: 5;
+            animation: explode 0.5s forwards;
+        }
+
+        @keyframes explode {
+            0% {
+                transform: scale(0.5);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(3);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="outer-game">
+        <div class="title">NESTED ASTEROID DODGE</div>
+        <div id="outer-score" class="score">OUTER SCORE: 0</div>
+        <div id="outer-game-over" class="game-over">
+            YOU HIT THE BOUNDARY!<br>
+            BOTH GAMES OVER<br>
+            <button id="outer-restart" class="restart-btn">RESTART</button>
+        </div>
+
+        <div id="inner-game-container">
+            <div id="inner-game">
+                <div id="inner-score" class="score">INNER SCORE: 0</div>
+                <div id="inner-game-over" class="game-over">
+                    ASTEROID COLLISION!<br>
+                    BOTH GAMES OVER<br>
+                    <button id="inner-restart" class="restart-btn">RESTART</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fragments for explosion animation -->
+        <div id="fragments-container"></div>
+    </div>
+
+    <script>
+        // Game constants
+        const INNER_GAME_WIDTH = 400;
+        const INNER_GAME_HEIGHT = 300;
+        const INNER_PLAYER_SIZE = 15;
+        const OUTER_PLAYER_SIZE = 30;
+        const INNER_ASTEROID_MIN_SIZE = 10;
+        const INNER_ASTEROID_MAX_SIZE = 30;
+        const OUTER_ASTEROID_MIN_SIZE = 30;
+        const OUTER_ASTEROID_MAX_SIZE = 80;
+        const INNER_ASTEROID_SPEED_MIN = 1;
+        const INNER_ASTEROID_SPEED_MAX = 3;
+        const OUTER_ASTEROID_SPEED_MIN = 0.5;
+        const OUTER_ASTEROID_SPEED_MAX = 1.5;
+        const INNER_ASTEROID_INTERVAL = 1000; // ms
+        const OUTER_ASTEROID_INTERVAL = 3000; // ms
+        const INNER_PLAYER_SPEED = 5;
+        const OUTER_PLAYER_SPEED = 3;
+
+        // Game state
+        let outerGameActive = true;
+        let innerGameActive = true;
+        let outerScore = 0;
+        let innerScore = 0;
+        let outerAsteroids = [];
+        let innerAsteroids = [];
+        let outerFrameId = null;
+        let innerFrameId = null;
+        let outerAsteroidInterval = null;
+        let innerAsteroidInterval = null;
+
+        // Game elements
+        const outerGame = document.getElementById('outer-game');
+        const innerGameContainer = document.getElementById('inner-game-container');
+        const innerGame = document.getElementById('inner-game');
+        const outerScoreEl = document.getElementById('outer-score');
+        const innerScoreEl = document.getElementById('inner-score');
+        const outerGameOverEl = document.getElementById('outer-game-over');
+        const innerGameOverEl = document.getElementById('inner-game-over');
+        const outerRestartBtn = document.getElementById('outer-restart');
+        const innerRestartBtn = document.getElementById('inner-restart');
+
+        // Initialize players
+        const outerPlayer = document.createElement('div');
+        outerPlayer.className = 'player';
+        outerPlayer.style.width = OUTER_PLAYER_SIZE + 'px';
+        outerPlayer.style.height = OUTER_PLAYER_SIZE + 'px';
+        outerGame.appendChild(outerPlayer);
+
+        const innerPlayer = document.createElement('div');
+        innerPlayer.className = 'player';
+        innerPlayer.style.width = INNER_PLAYER_SIZE + 'px';
+        innerPlayer.style.height = INNER_PLAYER_SIZE + 'px';
+        innerGame.appendChild(innerPlayer);
+
+        // Player positions
+        let outerPlayerX = window.innerWidth / 2 - OUTER_PLAYER_SIZE / 2;
+        let outerPlayerY = window.innerHeight / 2 - OUTER_PLAYER_SIZE / 2;
+        let innerPlayerX = INNER_GAME_WIDTH / 2 - INNER_PLAYER_SIZE / 2;
+        let innerPlayerY = INNER_GAME_HEIGHT / 2 - INNER_PLAYER_SIZE / 2;
+        let innerGameContainerX = window.innerWidth / 2 - INNER_GAME_WIDTH / 2;
+        let innerGameContainerY = window.innerHeight / 2 - INNER_GAME_HEIGHT / 2;
+
+        // Key states
+        const keys = {
+            ArrowUp: false,
+            ArrowDown: false,
+            ArrowLeft: false,
+            ArrowRight: false,
+            w: false,
+            a: false,
+            s: false,
+            d: false
+        };
+
+        // Functions
+        function updateOuterPlayerPosition() {
+            let oldX = outerPlayerX;
+            let oldY = outerPlayerY;
+
+            if (keys.w) outerPlayerY -= OUTER_PLAYER_SPEED;
+            if (keys.s) outerPlayerY += OUTER_PLAYER_SPEED;
+            if (keys.a) outerPlayerX -= OUTER_PLAYER_SPEED;
+            if (keys.d) outerPlayerX += OUTER_PLAYER_SPEED;
+
+            // Check for screen boundary collision - this is how the outer game fails
+            if (outerPlayerX <= 0 ||
+                outerPlayerX + OUTER_PLAYER_SIZE >= window.innerWidth ||
+                outerPlayerY <= 0 ||
+                outerPlayerY + OUTER_PLAYER_SIZE >= window.innerHeight) {
+                // Don't update position, game over
+                gameOver(true);
+                return;
+            }
+
+            // Update player position
+            outerPlayer.style.left = outerPlayerX + 'px';
+            outerPlayer.style.top = outerPlayerY + 'px';
+        }
+
+        function updateInnerPlayerPosition() {
+            if (keys.ArrowUp) innerPlayerY -= INNER_PLAYER_SPEED;
+            if (keys.ArrowDown) innerPlayerY += INNER_PLAYER_SPEED;
+            if (keys.ArrowLeft) innerPlayerX -= INNER_PLAYER_SPEED;
+            if (keys.ArrowRight) innerPlayerX += INNER_PLAYER_SPEED;
+
+            // Keep player within bounds
+            innerPlayerX = Math.max(0, Math.min(INNER_GAME_WIDTH - INNER_PLAYER_SIZE, innerPlayerX));
+            innerPlayerY = Math.max(0, Math.min(INNER_GAME_HEIGHT - INNER_PLAYER_SIZE, innerPlayerY));
+
+            innerPlayer.style.left = innerPlayerX + 'px';
+            innerPlayer.style.top = innerPlayerY + 'px';
+        }
+
+        function createAsteroid(isOuter) {
+            const asteroid = document.createElement('div');
+            asteroid.className = 'asteroid';
+
+            let size, minSize, maxSize, minSpeed, maxSpeed, containerWidth, containerHeight;
+
+            if (isOuter) {
+                minSize = OUTER_ASTEROID_MIN_SIZE;
+                maxSize = OUTER_ASTEROID_MAX_SIZE;
+                minSpeed = OUTER_ASTEROID_SPEED_MIN;
+                maxSpeed = OUTER_ASTEROID_SPEED_MAX;
+                containerWidth = window.innerWidth;
+                containerHeight = window.innerHeight;
+            } else {
+                minSize = INNER_ASTEROID_MIN_SIZE;
+                maxSize = INNER_ASTEROID_MAX_SIZE;
+                minSpeed = INNER_ASTEROID_SPEED_MIN;
+                maxSpeed = INNER_ASTEROID_SPEED_MAX;
+                containerWidth = INNER_GAME_WIDTH;
+                containerHeight = INNER_GAME_HEIGHT;
+            }
+
+            size = Math.floor(Math.random() * (maxSize - minSize + 1)) + minSize;
+            asteroid.style.width = size + 'px';
+            asteroid.style.height = size + 'px';
+
+            // Randomly choose a side to spawn from
+            const side = Math.floor(Math.random() * 4);
+            let x, y, dx, dy;
+
+            switch (side) {
+                case 0: // Top
+                    x = Math.random() * containerWidth;
+                    y = -size;
+                    dx = Math.random() * 2 - 1; // -1 to 1
+                    dy = Math.random() * (maxSpeed - minSpeed) + minSpeed; // Always moving down
+                    break;
+                case 1: // Right
+                    x = containerWidth + size;
+                    y = Math.random() * containerHeight;
+                    dx = -(Math.random() * (maxSpeed - minSpeed) + minSpeed); // Always moving left
+                    dy = Math.random() * 2 - 1; // -1 to 1
+                    break;
+                case 2: // Bottom
+                    x = Math.random() * containerWidth;
+                    y = containerHeight + size;
+                    dx = Math.random() * 2 - 1; // -1 to 1
+                    dy = -(Math.random() * (maxSpeed - minSpeed) + minSpeed); // Always moving up
+                    break;
+                case 3: // Left
+                    x = -size;
+                    y = Math.random() * containerHeight;
+                    dx = Math.random() * (maxSpeed - minSpeed) + minSpeed; // Always moving right
+                    dy = Math.random() * 2 - 1; // -1 to 1
+                    break;
+            }
+
+            asteroid.style.left = x + 'px';
+            asteroid.style.top = y + 'px';
+
+            if (isOuter) {
+                outerGame.appendChild(asteroid);
+                outerAsteroids.push({
+                    element: asteroid,
+                    x: x,
+                    y: y,
+                    size: size,
+                    dx: dx,
+                    dy: dy
+                });
+            } else {
+                innerGame.appendChild(asteroid);
+                innerAsteroids.push({
+                    element: asteroid,
+                    x: x,
+                    y: y,
+                    size: size,
+                    dx: dx,
+                    dy: dy
+                });
+            }
+        }
+
+        function updateOuterAsteroids() {
+            for (let i = 0; i < outerAsteroids.length; i++) {
+                const asteroid = outerAsteroids[i];
+                asteroid.x += asteroid.dx;
+                asteroid.y += asteroid.dy;
+                asteroid.element.style.left = asteroid.x + 'px';
+                asteroid.element.style.top = asteroid.y + 'px';
+
+                // Remove if out of bounds
+                if (asteroid.x < -asteroid.size * 2 ||
+                    asteroid.x > window.innerWidth + asteroid.size * 2 ||
+                    asteroid.y < -asteroid.size * 2 ||
+                    asteroid.y > window.innerHeight + asteroid.size * 2) {
+                    outerGame.removeChild(asteroid.element);
+                    outerAsteroids.splice(i, 1);
+                    i--;
+                    outerScore++;
+                    outerScoreEl.textContent = 'OUTER SCORE: ' + outerScore;
+                    continue;
+                }
+
+                // Check collision with outer player
+                if (checkCollision(
+                    outerPlayerX, outerPlayerY, OUTER_PLAYER_SIZE, OUTER_PLAYER_SIZE,
+                    asteroid.x, asteroid.y, asteroid.size, asteroid.size
+                )) {
+                    gameOver(true, true);  // true for outer game, true for asteroid (not boundary)
+                    return;
+                }
+
+                // Check collision with inner game container
+                if (checkCollision(
+                    innerGameContainerX, innerGameContainerY, INNER_GAME_WIDTH, INNER_GAME_HEIGHT,
+                    asteroid.x, asteroid.y, asteroid.size, asteroid.size
+                )) {
+                    // Create animation of inner game shattering
+                    shatterInnerGame();
+
+                    gameOver(true, true, true);  // true for outer game, true for asteroid, true for inner frame hit
+                    return;
+                }
+
+
+            }
+        }
+
+        function updateInnerAsteroids() {
+            for (let i = 0; i < innerAsteroids.length; i++) {
+                const asteroid = innerAsteroids[i];
+                asteroid.x += asteroid.dx;
+                asteroid.y += asteroid.dy;
+                asteroid.element.style.left = asteroid.x + 'px';
+                asteroid.element.style.top = asteroid.y + 'px';
+
+                // Remove if out of bounds
+                if (asteroid.x < -asteroid.size * 2 ||
+                    asteroid.x > INNER_GAME_WIDTH + asteroid.size * 2 ||
+                    asteroid.y < -asteroid.size * 2 ||
+                    asteroid.y > INNER_GAME_HEIGHT + asteroid.size * 2) {
+                    innerGame.removeChild(asteroid.element);
+                    innerAsteroids.splice(i, 1);
+                    i--;
+                    innerScore++;
+                    innerScoreEl.textContent = 'INNER SCORE: ' + innerScore;
+                    continue;
+                }
+
+                // Check collision with inner player
+                if (checkCollision(
+                    innerPlayerX, innerPlayerY, INNER_PLAYER_SIZE, INNER_PLAYER_SIZE,
+                    asteroid.x, asteroid.y, asteroid.size, asteroid.size
+                )) {
+                    // Create explosion at asteroid position
+                    createExplosion(
+                        innerGameContainerX + asteroid.x + asteroid.size / 2,
+                        innerGameContainerY + asteroid.y + asteroid.size / 2,
+                        asteroid.size * 2
+                    );
+
+                    // Remove the asteroid that caused the collision
+                    if (asteroid.element.parentNode) {
+                        innerGame.removeChild(asteroid.element);
+                    }
+
+                    gameOver(false);
+                    return;
+                }
+            }
+        }
+
+        function updateInnerGamePosition() {
+            innerGameContainerX = outerPlayerX + OUTER_PLAYER_SIZE/2 - INNER_GAME_WIDTH/2;
+            innerGameContainerY = outerPlayerY + OUTER_PLAYER_SIZE/2 - INNER_GAME_HEIGHT/2;
+
+            // Make sure inner game stays within outer game bounds
+            innerGameContainerX = Math.max(0, Math.min(window.innerWidth - INNER_GAME_WIDTH, innerGameContainerX));
+            innerGameContainerY = Math.max(0, Math.min(window.innerHeight - INNER_GAME_HEIGHT, innerGameContainerY));
+
+            innerGameContainer.style.left = innerGameContainerX + 'px';
+            innerGameContainer.style.top = innerGameContainerY + 'px';
+        }
+
+        function checkCollision(x1, y1, w1, h1, x2, y2, w2, h2) {
+            return x1 < x2 + w2 &&
+                   x1 + w1 > x2 &&
+                   y1 < y2 + h2 &&
+                   y1 + h1 > y2;
+        }
+
+        function gameOver(isOuter, isAsteroid = false, isInnerFrameHit = false) {
+            // End both games regardless of which one triggered game over
+            outerGameActive = false;
+            innerGameActive = false;
+
+            clearInterval(outerAsteroidInterval);
+            clearInterval(innerAsteroidInterval);
+            cancelAnimationFrame(outerFrameId);
+            cancelAnimationFrame(innerFrameId);
+
+            // Create customized game over message based on cause
+            if (isOuter) {
+                if (isAsteroid) {
+                    let message = 'ASTEROID COLLISION!';
+
+                    // Special message if the inner game frame was hit
+                    if (isInnerFrameHit) {
+                        message = 'INNER FRAME HIT BY ASTEROID!';
+                    }
+
+                    // Change text content for outer asteroid collision
+                    document.querySelector('#outer-game-over').innerHTML =
+                        message + '<br>' +
+                        'BOTH GAMES OVER<br>' +
+                        '<button id="outer-restart" class="restart-btn">RESTART</button>';
+
+                    // Re-attach event listener to the new button
+                    document.querySelector('#outer-restart').addEventListener('click', restartGame);
+                }
+                outerGameOverEl.style.display = 'block';
+            } else {
+                innerGameOverEl.style.display = 'block';
+            }
+        }
+
+        function restartGame() {
+            // Reset game state
+            outerGameActive = true;
+            innerGameActive = true;
+
+            // Reset scores
+            outerScore = 0;
+            innerScore = 0;
+            outerScoreEl.textContent = 'OUTER SCORE: 0';
+            innerScoreEl.textContent = 'INNER SCORE: 0';
+
+            // Reset outer game over message to default boundary message
+            document.querySelector('#outer-game-over').innerHTML =
+                'YOU HIT THE BOUNDARY!<br>' +
+                'BOTH GAMES OVER<br>' +
+                '<button id="outer-restart" class="restart-btn">RESTART</button>';
+            document.querySelector('#outer-restart').addEventListener('click', restartGame);
+
+            // Hide game over messages
+            outerGameOverEl.style.display = 'none';
+            innerGameOverEl.style.display = 'none';
+
+            // Clear old asteroids
+            outerAsteroids.forEach(asteroid => {
+                if (asteroid.element.parentNode) {
+                    outerGame.removeChild(asteroid.element);
+                }
+            });
+            outerAsteroids = [];
+
+            innerAsteroids.forEach(asteroid => {
+                if (asteroid.element.parentNode) {
+                    innerGame.removeChild(asteroid.element);
+                }
+            });
+            innerAsteroids = [];
+
+            // Reset inner game container opacity
+            innerGameContainer.style.opacity = '1';
+
+            // Clean up any remaining fragments
+            document.getElementById('fragments-container').innerHTML = '';
+
+            // Reset player positions
+            outerPlayerX = window.innerWidth / 2 - OUTER_PLAYER_SIZE / 2;
+            outerPlayerY = window.innerHeight / 2 - OUTER_PLAYER_SIZE / 2;
+            innerPlayerX = INNER_GAME_WIDTH / 2 - INNER_PLAYER_SIZE / 2;
+            innerPlayerY = INNER_GAME_HEIGHT / 2 - INNER_PLAYER_SIZE / 2;
+
+            outerPlayer.style.left = outerPlayerX + 'px';
+            outerPlayer.style.top = outerPlayerY + 'px';
+            innerPlayer.style.left = innerPlayerX + 'px';
+            innerPlayer.style.top = innerPlayerY + 'px';
+
+            // Start both game loops
+            startOuterGame();
+            startInnerGame();
+        }
+
+        // For backward compatibility, keep these function names but make them call restartGame
+        function restartOuterGame() {
+            restartGame();
+        }
+
+        function restartInnerGame() {
+            restartGame();
+        }
+
+
+        function outerGameLoop() {
+            if (!outerGameActive) return;
+            updateOuterPlayerPosition();
+            updateOuterAsteroids();
+            updateInnerGamePosition();
+            outerFrameId = requestAnimationFrame(outerGameLoop);
+        }
+
+        function innerGameLoop() {
+            if (!innerGameActive) return;
+            updateInnerPlayerPosition();
+            updateInnerAsteroids();
+            innerFrameId = requestAnimationFrame(innerGameLoop);
+        }
+
+        function startOuterGame() {
+            if (outerAsteroidInterval) clearInterval(outerAsteroidInterval);
+            outerAsteroidInterval = setInterval(() => {
+                if (outerGameActive) createAsteroid(true);
+            }, OUTER_ASTEROID_INTERVAL);
+            outerGameLoop();
+        }
+
+        function startInnerGame() {
+            if (innerAsteroidInterval) clearInterval(innerAsteroidInterval);
+            innerAsteroidInterval = setInterval(() => {
+                if (innerGameActive) createAsteroid(false);
+            }, INNER_ASTEROID_INTERVAL);
+            innerGameLoop();
+        }
+
+        // Event listeners
+        window.addEventListener('keydown', e => {
+            if (e.key in keys) {
+                keys[e.key] = true;
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            if (e.key in keys) {
+                keys[e.key] = false;
+                e.preventDefault();
+            }
+        });
+
+        outerRestartBtn.addEventListener('click', restartOuterGame);
+        innerRestartBtn.addEventListener('click', restartInnerGame);
+
+        window.addEventListener('resize', () => {
+            // Adjust player positions on window resize
+            outerPlayerX = Math.min(outerPlayerX, window.innerWidth - OUTER_PLAYER_SIZE);
+            outerPlayerY = Math.min(outerPlayerY, window.innerHeight - OUTER_PLAYER_SIZE);
+        });
+
+        // Animation functions
+        function createExplosion(x, y, size) {
+            const fragmentsContainer = document.getElementById('fragments-container');
+
+            // Create multiple explosion particles
+            const particleCount = 15;
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'explosion';
+
+                // Random size for particles
+                const particleSize = Math.random() * size / 3 + 3;
+                particle.style.width = particleSize + 'px';
+                particle.style.height = particleSize + 'px';
+
+                // Position slightly randomized around the explosion center
+                const offsetX = (Math.random() - 0.5) * size/2;
+                const offsetY = (Math.random() - 0.5) * size/2;
+                particle.style.left = (x + offsetX) + 'px';
+                particle.style.top = (y + offsetY) + 'px';
+
+                fragmentsContainer.appendChild(particle);
+
+                // Clean up after animation
+                setTimeout(() => {
+                    if (particle.parentNode === fragmentsContainer) {
+                        fragmentsContainer.removeChild(particle);
+                    }
+                }, 500);
+            }
+        }
+
+        function shatterInnerGame() {
+            // Hide the actual inner game container
+            innerGameContainer.style.opacity = '0';
+
+            const fragmentsContainer = document.getElementById('fragments-container');
+            const fragmentCount = 40; // Number of shards
+
+            // Calculate the center of the inner game
+            const centerX = innerGameContainerX + INNER_GAME_WIDTH / 2;
+            const centerY = innerGameContainerY + INNER_GAME_HEIGHT / 2;
+
+            // Create glass-like fragments
+            for (let i = 0; i < fragmentCount; i++) {
+                const fragment = document.createElement('div');
+                fragment.className = 'fragment';
+
+                // Random size for fragments
+                const width = Math.random() * 30 + 5;
+                const height = Math.random() * 20 + 5;
+                fragment.style.width = width + 'px';
+                fragment.style.height = height + 'px';
+
+                // Start position - somewhere within the inner game frame
+                const startX = innerGameContainerX + Math.random() * INNER_GAME_WIDTH;
+                const startY = innerGameContainerY + Math.random() * INNER_GAME_HEIGHT;
+
+                // Calculate direction away from center
+                const dirX = startX - centerX;
+                const dirY = startY - centerY;
+
+                // Normalize and scale for consistent distance
+                const length = Math.sqrt(dirX*dirX + dirY*dirY) || 1; // avoid division by zero
+                const normalizedDirX = dirX / length;
+                const normalizedDirY = dirY / length;
+
+                // Random speed for fragments
+                const speed = Math.random() * 15 + 5;
+                const rotationSpeed = (Math.random() - 0.5) * 720;
+
+                // Set initial position
+                fragment.style.left = startX + 'px';
+                fragment.style.top = startY + 'px';
+
+                // Add fragment to container
+                fragmentsContainer.appendChild(fragment);
+
+                // Animate the fragment
+                let time = 0;
+                const animate = () => {
+                    time += 16; // approximately 60 fps
+
+                    // Calculate new position
+                    const x = startX + normalizedDirX * speed * time / 16;
+                    const y = startY + normalizedDirY * speed * time / 16 + 0.5 * 0.1 * time * time / 256; // add gravity
+                    const rotation = rotationSpeed * time / 1000;
+
+                    // Apply position
+                    fragment.style.left = x + 'px';
+                    fragment.style.top = y + 'px';
+                    fragment.style.transform = `rotate(${rotation}deg)`;
+
+                    // Fade out
+                    const opacity = Math.max(0, 1 - time / 1000);
+                    fragment.style.opacity = opacity;
+
+                    if (opacity > 0 && time < 2000) {
+                        requestAnimationFrame(animate);
+                    } else if (fragment.parentNode === fragmentsContainer) {
+                        fragmentsContainer.removeChild(fragment);
+                    }
+                };
+
+                requestAnimationFrame(animate);
+            }
+
+            // Also create an explosion at the center
+            createExplosion(centerX, centerY, 100);
+        }
+
+        // Initialize
+        function init() {
+            // Initial positioning
+            outerPlayerX = window.innerWidth / 2 - OUTER_PLAYER_SIZE / 2;
+            outerPlayerY = window.innerHeight / 2 - OUTER_PLAYER_SIZE / 2;
+            innerPlayerX = INNER_GAME_WIDTH / 2 - INNER_PLAYER_SIZE / 2;
+            innerPlayerY = INNER_GAME_HEIGHT / 2 - INNER_PLAYER_SIZE / 2;
+            innerGameContainerX = window.innerWidth / 2 - INNER_GAME_WIDTH / 2;
+            innerGameContainerY = window.innerHeight / 2 - INNER_GAME_HEIGHT / 2;
+
+            // Set initial positions
+            outerPlayer.style.left = outerPlayerX + 'px';
+            outerPlayer.style.top = outerPlayerY + 'px';
+            innerPlayer.style.left = innerPlayerX + 'px';
+            innerPlayer.style.top = innerPlayerY + 'px';
+            innerGameContainer.style.left = innerGameContainerX + 'px';
+            innerGameContainer.style.top = innerGameContainerY + 'px';
+
+            // Start both games
+            startOuterGame();
+            startInnerGame();
+        }
+
+        // Start everything on page load
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
