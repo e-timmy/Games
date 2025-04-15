@@ -1,0 +1,18 @@
+
+======================================================================
+PERFORMANCE COMPARISON
+======================================================================
+Metric                         | SimpleMLP    | LeNet-5      | TinyVGG
+----------------------------------------------------------------------
+Parameters                     | 235,146      | 61,706       | 131,210
+Model Size (MB)                | 0.90         | 0.24         | 0.50
+Peak Memory Usage (MB)         | 315.34       | 236.17       | 248.91
+Total Training Time (s)        | 26.10        | 26.27        | 44.75
+Final Test Accuracy (%)        | 97.96        | 98.78        | 98.73
+Inference Time/Image (ms)      | 0.0026       | 0.0031       | 0.0051
+
+----------------------------------------------------------------------
+Best Accuracy: LeNet-5 (98.78%)
+Best Speed: SimpleMLP (0.0026 ms/image)
+Most Compact: LeNet-5 (61,706 parameters)
+Comparison plot saved as 'model_comparison_mnist.png'
